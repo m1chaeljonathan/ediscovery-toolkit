@@ -61,8 +61,15 @@ def render():
                 ]
 
             result = run_production_qc(dat_path, opt_path, spec)
+            st.session_state['prod_qc_result'] = result
+            # Clear any previous memo when new QC is run
+            st.session_state.pop('prod_qc_memo', None)
 
+    # Display results from session state (persists across reruns)
+    if 'prod_qc_result' in st.session_state:
+        result = st.session_state['prod_qc_result']
         stats = result['stats']
+
         if stats['passed']:
             st.success(f"PASSED — {stats['total_documents']} documents, 0 issues found")
         else:
@@ -79,26 +86,26 @@ def render():
             st.subheader("Privilege/PII Flags (immediate review required)")
             st.dataframe(result['issues']['coding'])
 
-        # Store result in session state for summary generation
-        st.session_state['prod_qc_result'] = result
-
         st.subheader("Full QC Results")
         st.json(result['issues'])
 
         st.download_button("Download stats.json",
             json.dumps(stats, indent=2), "stats.json", "application/json")
 
-    # LLM summary generation — separate from QC run (requires Ollama)
-    if 'prod_qc_result' in st.session_state:
+        # LLM summary generation
         st.divider()
         if st.button("Generate Counsel Summary (requires Ollama)", key="gen_summary"):
             with st.spinner("Generating summary memo via LLM..."):
                 try:
-                    memo = generate_qc_summary(st.session_state['prod_qc_result'])
-                    st.subheader("Counsel Summary Memo")
-                    st.markdown(memo)
-                    st.download_button("Download summary.md", memo,
-                        "summary.md", "text/markdown", key="dl_summary")
+                    memo = generate_qc_summary(result)
+                    st.session_state['prod_qc_memo'] = memo
                 except Exception as e:
                     st.error(f"LLM generation failed: {e}\n\n"
                              "Ensure Ollama is running: `ollama serve`")
+
+        if 'prod_qc_memo' in st.session_state:
+            st.subheader("Counsel Summary Memo")
+            st.markdown(st.session_state['prod_qc_memo'])
+            st.download_button("Download summary.md",
+                st.session_state['prod_qc_memo'],
+                "summary.md", "text/markdown", key="dl_summary")
