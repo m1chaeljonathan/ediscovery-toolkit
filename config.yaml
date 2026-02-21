@@ -1,6 +1,6 @@
 llm:
   base_url: http://localhost:11434/v1
-  model: llama3.1:32b
+  model: qwen2.5:32b-instruct-q4_K_M
   api_key: local
 
 server:
