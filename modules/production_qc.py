@@ -8,6 +8,7 @@ from modules.validators.bates import validate_bates
 from modules.validators.family import validate_families
 from modules.validators.coding import validate_coding
 from modules.validators.crossref import validate_crossref
+from llm.client import LLMClient
 
 
 def run_production_qc(dat_path: str, opt_path: str = None,
@@ -63,3 +64,36 @@ def run_production_qc(dat_path: str, opt_path: str = None,
         json.dump(stats, f, indent=2)
 
     return {'issues': all_issues, 'stats': stats, 'parse_errors': dat_result.errors}
+
+
+def generate_qc_summary(qc_result: dict, client: LLMClient = None) -> str:
+    """Generate a counsel-ready QC summary memo using the LLM.
+
+    Takes the output of run_production_qc and returns plain-text memo.
+    """
+    client = client or LLMClient()
+    prompt_path = Path(__file__).parent.parent / 'llm' / 'prompts' / 'qc_summary.txt'
+    system_prompt = prompt_path.read_text()
+
+    # Format issues into a readable block for the LLM
+    stats = qc_result['stats']
+    issues = qc_result['issues']
+
+    lines = [
+        f"Total documents: {stats['total_documents']}",
+        f"Overall status: {'PASSED' if stats['passed'] else 'FAILED'}",
+        f"Encoding detected: {stats['encoding_detected']}",
+        "",
+    ]
+
+    for category, items in issues.items():
+        if items:
+            lines.append(f"--- {category.upper()} ISSUES ({len(items)}) ---")
+            for item in items:
+                detail = item.get('detail', '')
+                doc_id = item.get('doc_id', item.get('doc_id', ''))
+                lines.append(f"  [{doc_id}] {detail}")
+            lines.append("")
+
+    user_content = "\n".join(lines)
+    return client.generate(system_prompt, user_content)

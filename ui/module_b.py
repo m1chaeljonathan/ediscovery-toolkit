@@ -3,7 +3,7 @@ import tempfile
 
 import streamlit as st
 
-from modules.production_qc import run_production_qc
+from modules.production_qc import run_production_qc, generate_qc_summary
 from llm.esi_parser import extract_esi_spec
 from llm.client import LLMClient
 
@@ -79,8 +79,26 @@ def render():
             st.subheader("Privilege/PII Flags (immediate review required)")
             st.dataframe(result['issues']['coding'])
 
+        # Store result in session state for summary generation
+        st.session_state['prod_qc_result'] = result
+
         st.subheader("Full QC Results")
         st.json(result['issues'])
 
         st.download_button("Download stats.json",
             json.dumps(stats, indent=2), "stats.json", "application/json")
+
+    # LLM summary generation — separate from QC run (requires Ollama)
+    if 'prod_qc_result' in st.session_state:
+        st.divider()
+        if st.button("Generate Counsel Summary (requires Ollama)", key="gen_summary"):
+            with st.spinner("Generating summary memo via LLM..."):
+                try:
+                    memo = generate_qc_summary(st.session_state['prod_qc_result'])
+                    st.subheader("Counsel Summary Memo")
+                    st.markdown(memo)
+                    st.download_button("Download summary.md", memo,
+                        "summary.md", "text/markdown", key="dl_summary")
+                except Exception as e:
+                    st.error(f"LLM generation failed: {e}\n\n"
+                             "Ensure Ollama is running: `ollama serve`")
