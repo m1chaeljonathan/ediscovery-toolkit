@@ -1,4 +1,6 @@
 DATE,AUTHOR,RECIPIENTS,DOC_TYPE,PRIVILEGE_BASIS
-01/15/2024,Smith, John,Jones, Mary,Email,ACP
-01/16/2024,Smith, John,,Memo,WP
-01/17/2024,Doe, Jane,Smith, John,Email,MADE UP
+01/15/2024,"Smith, John","Jones, Mary",Email,ACP
+01/16/2024,"Smith, John",,Memo,WP
+01/17/2024,"Doe, Jane","Smith, John",Email,MADE UP
+01/18/2024,"Williams, Robert","Chen, David",Letter,ATTORNEY-CLIENT
+,"Davis, Sarah","Smith, John",Email,COMMON INTEREST

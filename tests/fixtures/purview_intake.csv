@@ -1,0 +1,6 @@
+Item ID,Subject,Sender,Recipients,Date,Has attachment,Item class,Sensitivity label
+AAMkADE...001,Q3 Revenue Discussion,smith@corp.com,jones@corp.com; davis@corp.com,2024-03-15T14:30:00Z,True,IPM.Note,Confidential
+AAMkADE...002,Re: Q3 Revenue Discussion,jones@corp.com,smith@corp.com,2024-03-15T15:02:00Z,False,IPM.Note,Confidential
+AAMkADE...003,Budget Projections FY25,davis@corp.com,williams@corp.com,2024-04-01T09:00:00Z,True,IPM.Note,Highly Confidential
+AAMkADE...004,Team Offsite Planning,chen@corp.com,all-hands@corp.com,2024-04-10T11:30:00Z,False,IPM.Note,
+AAMkADE...005,,smith@corp.com,jones@corp.com,2024-05-20T08:15:00Z,False,IPM.Note,Confidential

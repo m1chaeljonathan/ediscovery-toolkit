@@ -17,4 +17,4 @@ def test_privlog_detects_invalid_basis():
 
 def test_privlog_reports_correct_entry_count():
     result = run_privilege_log_qc(FIXTURE)
-    assert result['stats']['total_entries'] == 3
+    assert result['stats']['total_entries'] == 5

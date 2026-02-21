@@ -6,3 +6,4 @@ reports/output/
 .venv/
 *.egg-info/
 dist/
+tests/fixtures/*.zip
