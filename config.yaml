@@ -1,0 +1,14 @@
+llm:
+  base_url: http://localhost:11434/v1
+  model: llama3.1:32b
+  api_key: local
+
+server:
+  upload_dir: ./uploads
+  report_dir: ./reports/output
+  max_file_size_mb: 500
+
+parsing:
+  encodings:
+    - utf-8-sig
+    - windows-1252
