@@ -321,6 +321,14 @@ The LLM client uses the OpenAI-compatible REST interface. Any of the following w
 | OpenAI API | `https://api.openai.com/v1` |
 | Any OpenAI-compatible endpoint | per provider docs |
 
+## Test Data Sources
+
+- [EDRM sample data](https://edrm.net/resources/data-sets/) — proper DAT/OPT with metadata, designed for eDiscovery tool testing
+- Enron email corpus — widely recognized, useful for demo and search term scenarios
+- TREC Legal Track — benchmarking legal IR components
+- Synthetic fixtures in `tests/fixtures/` — clean and issue-laden DAT/OPT/CSV files for automated testing
+- Poisoned prompts in the Security Hardening section above — copy-paste attack samples for testing prompt injection defenses
+
 ## Contributing
 
 Contributions welcome. Please open an issue first to discuss what you'd like to change.
