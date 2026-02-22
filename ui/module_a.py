@@ -7,7 +7,7 @@ from modules.intake_qc import run_intake_qc
 
 
 def render():
-    st.header("Module A — Load File Intake QC")
+    st.header("Intake QC")
     st.caption("Validate incoming load files at receipt. Catch formatting and "
                "completeness issues before ingestion.")
 

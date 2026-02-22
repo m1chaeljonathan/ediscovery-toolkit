@@ -1,6 +1,8 @@
+import io
 import json
 import tempfile
 
+import pandas as pd
 import streamlit as st
 
 from modules.production_qc import run_production_qc, generate_qc_summary
@@ -8,8 +10,28 @@ from llm.esi_parser import extract_esi_spec
 from llm.client import LLMClient
 
 
+def _issues_to_dataframe(issues: dict) -> pd.DataFrame:
+    """Flatten all issue categories into a single DataFrame."""
+    rows = []
+    for category, items in issues.items():
+        for item in items:
+            row = {'category': category}
+            row.update(item)
+            rows.append(row)
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows)
+
+
+def _df_to_xlsx(df: pd.DataFrame) -> bytes:
+    """Convert DataFrame to XLSX bytes."""
+    buf = io.BytesIO()
+    df.to_excel(buf, index=False, sheet_name='QC Issues')
+    return buf.getvalue()
+
+
 def render():
-    st.header("Module B — Production QC")
+    st.header("Production QC")
     st.caption("Upload outgoing production load files. Flags privileged/PII content "
                "and spec violations before documents leave the firm.")
 
@@ -86,11 +108,49 @@ def render():
             st.subheader("Privilege/PII Flags (immediate review required)")
             st.dataframe(result['issues']['coding'])
 
-        st.subheader("Full QC Results")
-        st.json(result['issues'])
+        # Issue breakdown chart
+        st.subheader("Issue Breakdown")
+        chart_data = pd.DataFrame({
+            'Category': ['Bates', 'Family', 'Coding', 'Cross-Ref'],
+            'Issues': [
+                stats['bates_issues'], stats['family_issues'],
+                stats['coding_issues'], stats['crossref_issues'],
+            ],
+        })
+        chart_data = chart_data[chart_data['Issues'] > 0]
+        if not chart_data.empty:
+            st.bar_chart(chart_data, x='Category', y='Issues')
 
-        st.download_button("Download stats.json",
-            json.dumps(stats, indent=2), "stats.json", "application/json")
+        # Full results table
+        st.subheader("Full QC Results")
+        issues_df = _issues_to_dataframe(result['issues'])
+        if not issues_df.empty:
+            st.dataframe(issues_df, use_container_width=True)
+        else:
+            st.info("No issues found.")
+
+        with st.expander("Raw JSON"):
+            st.json(result['issues'])
+
+        # Downloads
+        st.subheader("Export")
+        dl1, dl2, dl3 = st.columns(3)
+        with dl1:
+            st.download_button("Download JSON",
+                json.dumps(result['issues'], indent=2),
+                "qc_issues.json", "application/json", key="dl_json")
+        with dl2:
+            if not issues_df.empty:
+                st.download_button("Download CSV",
+                    issues_df.to_csv(index=False),
+                    "qc_issues.csv", "text/csv", key="dl_csv")
+        with dl3:
+            if not issues_df.empty:
+                st.download_button("Download XLSX",
+                    _df_to_xlsx(issues_df),
+                    "qc_issues.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="dl_xlsx")
 
         # LLM summary generation
         st.divider()

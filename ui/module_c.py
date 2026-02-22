@@ -8,7 +8,7 @@ from llm.esi_parser import extract_privlog_spec
 
 
 def render():
-    st.header("Module C — Privilege Log Conformity QC")
+    st.header("Privilege Log QC")
     st.caption("Validate privilege log format and required fields against "
                "court order specifications.")
 
