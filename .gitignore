@@ -8,3 +8,4 @@ reports/output/
 *.egg-info/
 dist/
 tests/fixtures/*.zip
+CLAUDE.md
