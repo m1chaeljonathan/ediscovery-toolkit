@@ -1,0 +1,12 @@
+{
+  "domain": "Financial Fraud",
+  "common_terms": [
+    "fraud~ W/10 (payment OR transfer OR wire)",
+    "embezzl~ OR misappropriat~",
+    "kickback~ OR bribe~ OR corrupt~",
+    "\"off the books\" OR \"off-the-books\"",
+    "launder~ W/5 (money OR fund~ OR proceed~)"
+  ],
+  "specialist_terms": ["hawala", "smurfing", "layering"],
+  "false_positive_patterns": ["fraud detection systems", "wire transfer (legitimate)"]
+}

@@ -1,0 +1,12 @@
+{
+  "domain": "Employment",
+  "common_terms": [
+    "terminat~ W/10 (discriminat~ OR retaliati~ OR wrongful~)",
+    "harass~ W/10 (sexual OR racial OR gender)",
+    "\"hostile work environment\"",
+    "accommodat~ W/10 (disabilit~ OR religion~)",
+    "discriminat~ W/10 (age OR race OR gender OR national)"
+  ],
+  "specialist_terms": ["disparate impact", "disparate treatment", "BFOQ"],
+  "false_positive_patterns": ["termination of contract", "performance termination"]
+}

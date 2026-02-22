@@ -9,10 +9,11 @@ st.set_page_config(
 st.title("eDiscovery Toolkit")
 st.caption("Local-first QC tools for eDiscovery professionals")
 
-tab_intake, tab_production, tab_privlog = st.tabs([
+tab_intake, tab_production, tab_privlog, tab_search = st.tabs([
     "Intake QC",
     "Production QC",
     "Privilege Log QC",
+    "Search Term Workbench",
 ])
 
 with tab_intake:
@@ -26,3 +27,7 @@ with tab_production:
 with tab_privlog:
     from ui.module_c import render as render_c
     render_c()
+
+with tab_search:
+    from ui.module_d import render as render_d
+    render_d()

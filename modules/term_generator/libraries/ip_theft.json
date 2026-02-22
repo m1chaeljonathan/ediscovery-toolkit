@@ -1,0 +1,12 @@
+{
+  "domain": "IP Theft / Trade Secrets",
+  "common_terms": [
+    "\"trade secret~\" OR \"proprietary information\"",
+    "confidential~ W/5 (information OR data OR document~)",
+    "misappropriat~ W/10 (secret~ OR information OR technology)",
+    "NDA OR \"non-disclosure\" OR \"nondisclosure\"",
+    "compet~ W/10 (restrict~ OR prohibit~ OR covenant)"
+  ],
+  "specialist_terms": ["inevitable disclosure", "DTSA", "UTSA"],
+  "false_positive_patterns": ["confidential (generic letterhead)"]
+}
