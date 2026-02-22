@@ -8,6 +8,20 @@ Manual QC of productions and load files is the highest-risk, most time-consuming
 
 The architecture is a hybrid pipeline: deterministic structured parsing makes every pass/fail call, while a local LLM interprets unstructured inputs (ESI order PDFs) and generates human-readable reports. **The LLM never makes a QC determination.**
 
+## Screenshots
+
+**Upload and run QC checks:**
+
+![Upload and run QC checks](docs/screenshots/module-b-upload.png)
+
+**Results with privilege flags, issue breakdown chart, and export options:**
+
+![QC results with privilege flags, Bates gaps, and cross-reference checks](docs/screenshots/module-b-results.png)
+
+**LLM-generated counsel summary memo:**
+
+![LLM-generated counsel summary memo](docs/screenshots/module-b-summary.png)
+
 ## Modules
 
 ### Intake QC
@@ -156,6 +170,10 @@ The LLM client uses the OpenAI-compatible REST interface. Any of the following w
 | LM Studio | `http://localhost:1234/v1` |
 | OpenAI API | `https://api.openai.com/v1` |
 | Any OpenAI-compatible endpoint | per provider docs |
+
+## Contributing
+
+Contributions welcome. Please open an issue first to discuss what you'd like to change.
 
 ## License
 
