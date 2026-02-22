@@ -2,194 +2,161 @@
 
 Local-first QC toolkit for eDiscovery professionals. Automates the highest-risk workflows for project managers, attorneys, and legal ops teams — production review, load file intake, and privilege log conformity — without sending client data to external services.
 
+## Why
+
+Manual QC of productions and load files is the highest-risk, most time-consuming task in eDiscovery project management. A single privileged document in an outgoing production can trigger sanctions, malpractice exposure, or case-altering consequences. This toolkit catches those issues before they leave the firm.
+
+The architecture is a hybrid pipeline: deterministic structured parsing makes every pass/fail call, while a local LLM interprets unstructured inputs (ESI order PDFs) and generates human-readable reports. **The LLM never makes a QC determination.**
+
 ## Modules
 
-### Module B — Production QC (priority 1)
+### Intake QC
 
-Final gate before documents leave the firm. Validates outgoing production metadata against ESI order specifications and flags privileged or PII-coded documents before production.
+Validates incoming load files at receipt, before ingestion into the review platform. Catches formatting and completeness issues when redelivery is still cheap.
 
-Checks:
+- Delimiter and encoding detection (UTF-8, Windows-1252)
+- Required field presence and blank control numbers
+- Duplicate control numbers and broken family ranges
+- Purview ISO 8601 date format detection
+- OPT image path cross-reference
+
+### Production QC
+
+Final gate before documents leave the firm. Validates outgoing production metadata against ESI order specifications and flags privileged or PII-coded documents.
+
 - Bates format, sequence, gaps, and duplicates
 - Family integrity (parent produced implies all attachments produced)
 - DAT to OPT cross-reference
 - Privilege and PII coding flags
 - Confidentiality designation validity
+- LLM-generated counsel summary memo
 
-Output: `summary.md` for counsel, `flagged_docs.csv` for PM remediation, `stats.json`.
+### Privilege Log QC
 
-### Module A — Load file intake QC (priority 2)
+Validates a privilege log draft against court-ordered specifications. Format and required field conformity only — no description generation (that carries liability risk outside the tool's scope).
 
-Validates incoming load files at receipt, before ingestion into the review platform. Catches formatting and completeness issues when redelivery is still cheap.
-
-Checks:
-- Delimiter and encoding detection (UTF-8, Windows-1252)
-- Required field presence and blank control numbers
-- Duplicate control numbers and broken family ranges
-- Purview ISO 8601 date format flag
-- OPT image path cross-reference
-
-Output: `summary.md`, `field_mapping.csv`, `issues.csv`, `redelivery_memo.md`.
-
-### Module C — Privilege log conformity QC (priority 3)
-
-Validates a privilege log draft against the court-ordered privilege log specifications. Format and required field conformity only — no description generation.
-
-Checks:
 - Required columns present per order spec
 - Required fields populated (date, author, recipients, doc type, privilege basis)
 - Privilege basis codes valid (ACP, WP, common interest, etc.)
-- Format matches order (column order, headers, date format, sort order)
-
-Output: `conformity_report.md`, `flagged_entries.csv`, `spec_summary.md`.
+- Format matches order (column order, headers, date format)
 
 ## Architecture
 
-Two layers with a hard boundary between them:
-
 ```
-Web UI (Streamlit)
-        |
+Streamlit UI
+      |
 Orchestration layer
-        |
-  ------+------+------
-  |            |     |
-Module B  Module A  Module C
-        |
+      |
+  ----+--------+------
+  |            |      |
+Intake QC  Prod QC  Priv Log QC
+      |
 Structured parsing engine   <-- all pass/fail decisions here
-        |
-LLM integration layer       <-- interpretation and report generation only
+      |
+LLM integration layer       <-- interpretation and reporting only
 ```
 
-The structured parsing engine makes every pass/fail call. The LLM interprets unstructured inputs (ESI order PDFs, privilege log orders) and generates human-readable output. The LLM never makes a QC determination.
-
-## Supported file formats
+## Supported File Formats
 
 | Format | Use | Notes |
 |--------|-----|-------|
 | `.DAT` | Metadata load files | Concordance delimiters: `¶` (ASCII 020) field, `þ` (ASCII 254) qualifier |
 | `.OPT` | Image load files | Standard comma-delimited |
 | `.CSV` | Generic exports, Purview output | UTF-8 or Windows-1252 |
-| `.PDF` | ESI orders, privilege log orders | LLM extraction via pdfplumber |
+| `.PDF` | ESI orders, privilege log orders | Text extraction via pdfplumber, LLM interpretation |
 | `.XLSX` | Privilege logs | openpyxl |
 
 ## Requirements
 
 - Python 3.11+
-- [Ollama](https://ollama.com) running locally with a supported model
+- [Ollama](https://ollama.com) running locally (for LLM features — QC checks work without it)
 
-Minimum model: Llama 3.1 8B. Recommended: 32B+ for reliable legal document parsing.
+Minimum model: 8B (Llama 3.1 8B, Phi-4). Recommended: 32B+ for reliable legal document parsing.
 
 ## Setup
 
-1. Clone the repository
-
 ```bash
-git clone ssh://git@192.168.50.66:2222/m1chaeljonathan/ediscovery-toolkit.git
+git clone https://github.com/m1chaeljonathan/ediscovery-toolkit.git
 cd ediscovery-toolkit
-```
-
-2. Create a virtual environment and install dependencies
-
-```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Configure the LLM endpoint in `config.yaml`
+Configure the LLM endpoint in `config.yaml`:
 
 ```yaml
 llm:
   base_url: http://localhost:11434/v1
-  model: llama3.1:32b
+  model: llama3.1:8b          # or any Ollama model
   api_key: local
-
-server:
-  upload_dir: ./uploads
-  report_dir: ./reports/output
-  max_file_size_mb: 500
 ```
 
-4. Start Ollama and pull a model
+Start Ollama and pull a model:
 
 ```bash
-ollama pull llama3.1:32b
+ollama pull llama3.1:8b
 ```
 
-## Running the app
+## Usage
 
 ```bash
 streamlit run app.py
 ```
 
-Opens at `http://localhost:8501`. Upload files in each tab and run QC checks. Results display in-browser and export to the configured report directory.
+Opens at `http://localhost:8501`. Upload files in each tab, run QC checks, and export results as JSON, CSV, or XLSX.
 
-## Running tests
+## Running Tests
 
 ```bash
 pytest tests/ -v
 ```
 
-Test fixtures are synthetic load files covering clean and issue scenarios. EDRM sample data (edrm.net) can be placed in `tests/fixtures/` for end-to-end validation.
+35 tests covering parser edge cases, all validators, and end-to-end module QC with synthetic fixtures.
 
-## Project structure
+## Project Structure
 
 ```
 ediscovery-toolkit/
   app.py                    # Streamlit entry point
   config.yaml               # LLM endpoint, paths, limits
-  requirements.txt
-  parser/
+  parsers/
     dat_parser.py           # Concordance DAT parser
     opt_parser.py           # OPT image load file parser
     csv_parser.py           # Generic CSV / Purview parser
     schema.py               # Canonical Document dataclass
-    validator.py
   modules/
-    production_qc.py        # Module B pipeline
-    intake_qc.py            # Module A pipeline
-    privilege_log_qc.py     # Module C pipeline
+    production_qc.py        # Production QC pipeline
+    intake_qc.py            # Intake QC pipeline
+    privilege_log_qc.py     # Privilege Log QC pipeline
     validators/
-      bates.py
-      family.py
-      coding.py
-      crossref.py
+      bates.py              # Bates sequence and format validation
+      family.py             # Family integrity checks
+      coding.py             # Privilege and PII coding flags
+      crossref.py           # DAT/OPT cross-reference
   llm/
-    client.py               # OpenAI-compatible abstraction
+    client.py               # OpenAI-compatible LLM abstraction
     esi_parser.py           # ESI order and privilege log spec extraction
     prompts/                # Versioned prompt templates
   ui/
-    module_a.py
-    module_b.py
-    module_c.py
-  reports/
-    output/                 # Generated QC reports
+    module_a.py             # Intake QC tab
+    module_b.py             # Production QC tab
+    module_c.py             # Privilege Log QC tab
   tests/
-    fixtures/               # Sample DAT/OPT files for testing
+    fixtures/               # Synthetic DAT/OPT/CSV test data
 ```
 
-## LLM compatibility
+## LLM Compatibility
 
-The LLM client uses the OpenAI-compatible REST interface. Any of the following work without code changes — update `config.yaml` only:
+The LLM client uses the OpenAI-compatible REST interface. Any of the following work — update `config.yaml` only:
 
 | Runtime | Base URL |
 |---------|----------|
 | Ollama (default) | `http://localhost:11434/v1` |
 | LM Studio | `http://localhost:1234/v1` |
-| OpenAI | `https://api.openai.com/v1` |
-| Anthropic (via proxy) | per proxy config |
+| OpenAI API | `https://api.openai.com/v1` |
+| Any OpenAI-compatible endpoint | per provider docs |
 
-## Test data sources
+## License
 
-- [EDRM sample data](https://edrm.net/resources/data-sets/) — proper DAT/OPT with metadata, designed for eDiscovery tool testing
-- Enron email corpus — widely recognized, useful for demo scenarios
-- TREC Legal Track — benchmarking legal IR components
-
-## Status
-
-POC in active development. See `plans/2026-02-21-ediscovery-toolkit-poc.md` for the 22-task implementation plan.
-
-## Related
-
-- Design document: `plans/design.md`
-- Vault notes: `02_ai_ml/projects/ediscovery-toolkit/`
+[Apache License 2.0](LICENSE)
