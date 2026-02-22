@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from llm.client import LLMClient
+from modules.term_generator.name_proximity import generate_name_terms
 
 _PROMPTS = Path(__file__).parent.parent.parent / 'llm' / 'prompts'
 _LIBS    = Path(__file__).parent / 'libraries'
@@ -58,4 +59,5 @@ def generate(case_text: str,
     client = LLMClient()
     concepts = extract_concepts(case_text, client)
     terms = draft_terms(concepts, seed_terms, client)
+    terms.extend(generate_name_terms(concepts.get('named_entities', [])))
     return concepts, terms

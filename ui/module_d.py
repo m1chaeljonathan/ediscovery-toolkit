@@ -3,7 +3,9 @@ import io
 import openpyxl
 import streamlit as st
 
-from modules.term_analytics import TermStats, compute_stats, validate_syntax
+from modules.term_analytics import (
+    TermStats, compute_stats, group_date_ranges, validate_syntax,
+)
 from modules.term_generator.generator import generate
 
 STATUS_OPTIONS = ['draft', 'proposed', 'accepted', 'rejected', 'modified']
@@ -16,6 +18,8 @@ STATUS_ICONS = {
 def _init_state():
     if 'terms' not in st.session_state:
         st.session_state.terms = []
+    if 'custodian_date_ranges' not in st.session_state:
+        st.session_state.custodian_date_ranges = []
 
 
 def _to_excel(terms: list) -> bytes:
@@ -68,6 +72,8 @@ def render():
             with st.spinner("Extracting concepts and drafting terms..."):
                 concepts, raw_terms = generate(case_text, seeds)
             st.session_state['last_concepts'] = concepts
+            st.session_state.custodian_date_ranges = concepts.get(
+                'custodian_date_ranges', [])
             st.info(f"Domain: **{concepts.get('industry_domain', 'unknown')}** · "
                     f"{len(raw_terms)} terms drafted")
 
@@ -126,6 +132,21 @@ def render():
                   'status': t.status}
                  for t in terms], total_docs)
 
+            # -- Date range context -----------------------------------------------
+            date_ranges = st.session_state.custodian_date_ranges
+            if date_ranges:
+                st.subheader("Custodian date ranges")
+                st.caption(
+                    "Informational — these date ranges apply at the "
+                    "Relativity base search level, not as search terms."
+                )
+                grouped = group_date_ranges(date_ranges)
+                for (start, end), custodians in grouped.items():
+                    st.info(
+                        f"**{start} — {end}**: {', '.join(custodians)}"
+                    )
+
+            # -- Risk flags -------------------------------------------------------
             flagged = sum(1 for t in terms_with_hits if t.risk_flags)
             if flagged:
                 st.warning(f"{flagged} term(s) flagged")
@@ -205,4 +226,5 @@ def render():
 
             if st.button("Clear session", type="secondary"):
                 st.session_state.terms = []
+                st.session_state.custodian_date_ranges = []
                 st.rerun()

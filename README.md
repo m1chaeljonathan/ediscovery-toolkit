@@ -34,6 +34,19 @@ Validates incoming load files at receipt, before ingestion into the review platf
 - Purview ISO 8601 date format detection
 - OPT image path cross-reference
 
+### Search Term Workbench
+
+LLM-assisted search term generation and QC for negotiation rounds. Extracts key concepts from case text, drafts dtSearch/Lucene terms with rationale, and provides analytics for iterative refinement.
+
+- Two-stage LLM pipeline: concept extraction → term drafting
+- Domain-specific term libraries (financial fraud, employment, IP theft)
+- Deterministic name proximity variations — `first W/3 last` plus common nickname expansions (~45 mappings) for person entities, with automatic corporate name exclusion
+- Custodian date range extraction and grouping (informational context for Relativity base search configuration)
+- Syntax validation: unbalanced parentheses, missing proximity numbers, leading wildcards, lowercase boolean operators
+- Risk flags: over-broad (>15% of dataset), subsumed (<5% unique ratio), attachment-heavy (family/doc ratio >3x)
+- Per-term status workflow: draft → proposed → accepted / rejected / modified
+- Excel export with round-based file naming for negotiation tracking
+
 ### Production QC
 
 Final gate before documents leave the firm. Validates outgoing production metadata against ESI order specifications and flags privileged or PII-coded documents.
@@ -61,13 +74,15 @@ Streamlit UI
       |
 Orchestration layer
       |
-  ----+--------+------
-  |            |      |
-Intake QC  Prod QC  Priv Log QC
+  ----+--------+-----------+------
+  |            |           |      |
+Intake QC  Search Terms  Prod QC  Priv Log QC
+               |
+         Name proximity        <-- deterministic nickname/W3 expansion
+               |
+Structured parsing engine      <-- all pass/fail decisions here
       |
-Structured parsing engine   <-- all pass/fail decisions here
-      |
-LLM integration layer       <-- interpretation and reporting only
+LLM integration layer         <-- concept extraction, term drafting, reporting
 ```
 
 ## Supported File Formats
@@ -126,7 +141,7 @@ Opens at `http://localhost:8501`. Upload files in each tab, run QC checks, and e
 pytest tests/ -v
 ```
 
-35 tests covering parser edge cases, all validators, and end-to-end module QC with synthetic fixtures.
+57 tests covering parser edge cases, all validators, search term analytics, name proximity generation, and end-to-end module QC with synthetic fixtures.
 
 ## Project Structure
 
@@ -143,11 +158,16 @@ ediscovery-toolkit/
     production_qc.py        # Production QC pipeline
     intake_qc.py            # Intake QC pipeline
     privilege_log_qc.py     # Privilege Log QC pipeline
+    term_analytics.py       # Search term stats, syntax validation, risk flags
     validators/
       bates.py              # Bates sequence and format validation
       family.py             # Family integrity checks
       coding.py             # Privilege and PII coding flags
       crossref.py           # DAT/OPT cross-reference
+    term_generator/
+      generator.py          # Two-stage LLM pipeline (concepts → terms)
+      name_proximity.py     # Deterministic name W/3 expansion + nicknames
+      libraries/            # Domain-specific term libraries (JSON)
   llm/
     client.py               # OpenAI-compatible LLM abstraction
     esi_parser.py           # ESI order and privilege log spec extraction
@@ -156,6 +176,7 @@ ediscovery-toolkit/
     module_a.py             # Intake QC tab
     module_b.py             # Production QC tab
     module_c.py             # Privilege Log QC tab
+    module_d.py             # Search Term Workbench tab
   tests/
     fixtures/               # Synthetic DAT/OPT/CSV test data
 ```

@@ -5,6 +5,7 @@ Return a JSON object with these keys:
 - named_entities: list of relevant people, companies, or products
 - industry_domain: one of ["financial_fraud","employment","ip_theft","general"]
 - custodian_hints: list of custodian names or roles mentioned
+- custodian_date_ranges: list of {custodian, start_date, end_date, source} for any date ranges tied to custodians or the matter (e.g. employment dates, relevant time periods)
 - notes: any other relevant context
 
 Be precise. Do not draft search terms yet.

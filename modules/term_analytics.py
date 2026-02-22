@@ -44,14 +44,6 @@ def validate_syntax(term: str, syntax: str = 'dtsearch') -> list[str]:
 
 def compute_stats(terms: list[dict], total_docs: int,
                   threshold: float = OVER_BROAD_THRESHOLD) -> list[TermStats]:
-    # Only flag ZERO HITS when hit data has been entered for at least one term
-    any_hits_entered = any(
-        int(t.get('doc_hits') or 0) > 0 or
-        int(t.get('family_hits') or 0) > 0 or
-        int(t.get('unique_hits') or 0) > 0
-        for t in terms
-    )
-
     results = []
     for t in terms:
         doc_hits    = int(t.get('doc_hits') or 0)
@@ -63,7 +55,6 @@ def compute_stats(terms: list[dict], total_docs: int,
         errors      = validate_syntax(t.get('term_text', ''),
                                       t.get('syntax', 'dtsearch'))
         flags = []
-        if doc_hits == 0 and any_hits_entered:       flags.append('ZERO HITS')
         if pct > threshold:                          flags.append('OVER-BROAD')
         if doc_hits > 0 and u_ratio < SUBSUMED_THRESHOLD:
                                                      flags.append('SUBSUMED')
@@ -85,3 +76,17 @@ def compute_stats(terms: list[dict], total_docs: int,
             status=t.get('status', 'draft'),
         ))
     return results
+
+
+def group_date_ranges(
+    date_ranges: list[dict],
+) -> dict[tuple[str, str], list[str]]:
+    """Group custodians that share the same (start_date, end_date) range.
+
+    Returns {(start_date, end_date): [custodian, ...]} sorted by start_date.
+    """
+    groups: dict[tuple[str, str], list[str]] = {}
+    for dr in date_ranges:
+        key = (dr.get("start_date", ""), dr.get("end_date", ""))
+        groups.setdefault(key, []).append(dr.get("custodian", "unknown"))
+    return dict(sorted(groups.items(), key=lambda item: item[0]))
