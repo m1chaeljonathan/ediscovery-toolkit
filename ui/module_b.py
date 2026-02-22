@@ -69,6 +69,7 @@ def render():
             if esi_file:
                 with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f:
                     f.write(esi_file.read())
+                    f.flush()
                     try:
                         spec = extract_esi_spec(f.name)
                         st.info(f"ESI spec extracted: {spec.get('required_fields', 'N/A')}")

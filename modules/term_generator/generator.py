@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from llm.client import LLMClient
+from llm.schemas import TERM_CONCEPT_SCHEMA, TERM_DRAFT_ITEM_SCHEMA
 from modules.term_generator.name_proximity import generate_name_terms
 
 _PROMPTS = Path(__file__).parent.parent.parent / 'llm' / 'prompts'
@@ -31,7 +32,8 @@ def extract_concepts(text: str, client: LLMClient = None) -> dict:
     client = client or LLMClient()
     return client.extract(
         _prompt('term_concept_extract.txt'),
-        f"CASE TEXT:\n\n{text[:6000]}"
+        f"CASE TEXT:\n\n{text[:6000]}",
+        schema=TERM_CONCEPT_SCHEMA,
     )
 
 
@@ -49,7 +51,8 @@ def draft_terms(concepts: dict, seed_terms: list[str] = None,
         ctx += "\nSEED TERMS:\n" + "\n".join(seed_terms)
 
     return _parse_list(
-        client.extract(_prompt('term_draft.txt'), ctx)
+        client.extract(_prompt('term_draft.txt'), ctx,
+                       schema=TERM_DRAFT_ITEM_SCHEMA)
     )
 
 

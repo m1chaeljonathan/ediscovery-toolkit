@@ -6,7 +6,7 @@ Local-first QC toolkit for eDiscovery professionals. Automates the highest-risk 
 
 Manual QC of productions and load files is the highest-risk, most time-consuming task in eDiscovery project management. A single privileged document in an outgoing production can trigger sanctions, malpractice exposure, or case-altering consequences. This toolkit catches those issues before they leave the firm.
 
-The architecture is a hybrid pipeline: deterministic structured parsing makes every pass/fail call, while a local LLM interprets unstructured inputs (ESI order PDFs) and generates human-readable reports. **The LLM never makes a QC determination.**
+The architecture is a hybrid pipeline: deterministic structured parsing makes every pass/fail call, while a local LLM interprets unstructured inputs (ESI order PDFs) and generates human-readable reports. **The LLM never makes a QC determination.** The LLM integration layer is hardened with input sanitization, output schema validation, and prompt injection defense directives.
 
 ## Screenshots
 
@@ -66,6 +66,20 @@ Validates a privilege log draft against court-ordered specifications. Format and
 - Required fields populated (date, author, recipients, doc type, privilege basis)
 - Privilege basis codes valid (ACP, WP, common interest, etc.)
 - Format matches order (column order, headers, date format)
+
+## Security Hardening
+
+The LLM integration layer includes three defense layers to prevent prompt injection from manipulating which QC checks the deterministic engine runs:
+
+**Input Sanitization** — All user-supplied text (PDF extracts, case descriptions) is scanned for injection patterns before reaching the LLM. Detected patterns are neutralized while preserving legitimate document content:
+- Directive-like line starters (`System:`, `Instruction:`, `Prompt:`)
+- XML/HTML role tags (`<system>`, `<instruction>`)
+- "Ignore previous instructions" phrases
+- Delimiter floods (5+ consecutive `#`, `=`, `-`)
+
+**Output Schema Validation** — Every LLM JSON response is validated against a typed schema (required keys, type checks, enum constraints, list item types). Malformed responses are annotated with `_schema_errors` for review rather than silently accepted. Schemas cover all 5 JSON-returning prompts: ESI order extraction, privilege log spec, term concepts, term drafts, and field mapping.
+
+**System Prompt Defense Directives** — All 6 LLM prompts include an identical directive block instructing the model to treat user content as data only and ignore embedded instructions, commands, or role overrides.
 
 ## Architecture
 
@@ -141,7 +155,7 @@ Opens at `http://localhost:8501`. Upload files in each tab, run QC checks, and e
 pytest tests/ -v
 ```
 
-57 tests covering parser edge cases, all validators, search term analytics, name proximity generation, and end-to-end module QC with synthetic fixtures.
+106 tests covering parser edge cases, all validators, search term analytics, name proximity generation, input sanitization, schema validation, LLM client hardening, and end-to-end module QC with synthetic fixtures.
 
 ## Project Structure
 
@@ -169,9 +183,11 @@ ediscovery-toolkit/
       name_proximity.py     # Deterministic name W/3 expansion + nicknames
       libraries/            # Domain-specific term libraries (JSON)
   llm/
-    client.py               # OpenAI-compatible LLM abstraction
+    client.py               # OpenAI-compatible LLM abstraction (sanitize + schema)
+    sanitize.py             # Input sanitization — prompt injection defense
+    schemas.py              # Output schema definitions + validation
     esi_parser.py           # ESI order and privilege log spec extraction
-    prompts/                # Versioned prompt templates
+    prompts/                # Versioned prompt templates (with defense directives)
   ui/
     module_a.py             # Intake QC tab
     module_b.py             # Production QC tab
