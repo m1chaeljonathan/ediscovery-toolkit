@@ -26,9 +26,22 @@ def test_valid_term():
 
 
 def test_zero_hits_flag():
+    """ZERO HITS only fires when other terms have hit data (not on fresh terms)."""
+    s = compute_stats([
+        {'term_text': 'x', 'syntax': 'dtsearch',
+         'doc_hits': 0, 'family_hits': 0, 'unique_hits': 0},
+        {'term_text': 'y', 'syntax': 'dtsearch',
+         'doc_hits': 100, 'family_hits': 100, 'unique_hits': 80},
+    ], 1000)
+    assert 'ZERO HITS' in s[0].risk_flags
+    assert 'ZERO HITS' not in s[1].risk_flags
+
+
+def test_zero_hits_suppressed_when_no_data():
+    """All terms at 0 hits means no hit data entered yet — don't flag."""
     s = compute_stats([{'term_text': 'x', 'syntax': 'dtsearch',
                         'doc_hits': 0, 'family_hits': 0, 'unique_hits': 0}], 1000)
-    assert 'ZERO HITS' in s[0].risk_flags
+    assert 'ZERO HITS' not in s[0].risk_flags
 
 
 def test_over_broad_flag():
