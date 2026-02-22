@@ -6,7 +6,9 @@ Local-first QC toolkit for eDiscovery professionals. Automates the highest-risk 
 
 Manual QC of productions and load files is the highest-risk, most time-consuming task in eDiscovery project management. A single privileged document in an outgoing production can trigger sanctions, malpractice exposure, or case-altering consequences. This toolkit catches those issues before they leave the firm.
 
-The architecture is a hybrid pipeline: deterministic structured parsing makes every pass/fail call, while a local LLM interprets unstructured inputs (ESI order PDFs) and generates human-readable reports. **The LLM never makes a QC determination.** The LLM integration layer is hardened with input sanitization, output schema validation, and prompt injection defense directives.
+Beyond production QC, the toolkit covers the full EDRM workflow from intake through search term negotiation. The Search Term Workbench uses a two-stage LLM pipeline to extract legal concepts from case descriptions and draft dtSearch/Lucene terms with rationale, risk notes, and domain-specific library support — then layers deterministic analytics (syntax validation, over-broad detection, name proximity expansions with nickname mappings) on top. Teams can track terms through proposal rounds with per-term status workflows and Excel export.
+
+The architecture is a hybrid pipeline: deterministic structured parsing makes every pass/fail call, while a local LLM interprets unstructured inputs (ESI order PDFs, case descriptions) and generates human-readable reports. **The LLM never makes a QC determination.** Because the LLM extracts specs that configure which checks the deterministic engine runs, the LLM integration layer is hardened against prompt injection with three defense layers: input sanitization that neutralizes embedded directives, output schema validation that catches manipulated responses, and system prompt defense directives on all prompts.
 
 ## Screenshots
 
