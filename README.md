@@ -26,6 +26,21 @@ The architecture is a hybrid pipeline: deterministic structured parsing makes ev
 
 ## Modules
 
+Modules are ordered to follow the EDRM (Electronic Discovery Reference Model) workflow — from information governance through production and privilege review.
+
+### Litigation Readiness
+
+AI-specific and enterprise data mapping, legal hold workflow, and preservation memo generation. Covers data types unique to AI companies (training data provenance, model artifact preservation, API log retention, safety evaluation records) alongside traditional enterprise sources in one unified data map.
+
+- Default registry: 20 AI-specific + 10 traditional enterprise data types with volume estimates, formats, and risk levels
+- LLM-powered data map generation from company descriptions
+- Legal hold analysis: map litigation scenarios to affected data types with preservation actions, custodian recommendations, and privilege considerations
+- Deterministic risk flags: no retention policy, no custodian, high-risk unprotected, complex preservation with no plan
+- Gap analysis with readiness score (0-100): 40% retention coverage, 30% custodian coverage, 30% high-risk protection
+- 9 scenario types: copyright/training data, harmful output, antitrust, IP theft, regulatory inquiry, employment discrimination (AI), contract dispute, data breach, trade secret
+- LLM-generated preservation scope memos in professional legal format
+- Excel export for data maps and hold details
+
 ### Intake QC
 
 Validates incoming load files at receipt, before ingestion into the review platform. Catches formatting and completeness issues when redelivery is still cheap.
@@ -69,18 +84,9 @@ Validates a privilege log draft against court-ordered specifications. Format and
 - Privilege basis codes valid (ACP, WP, common interest, etc.)
 - Format matches order (column order, headers, date format)
 
-### Litigation Readiness
+### Inline Help
 
-AI-specific and enterprise data mapping, legal hold workflow, and preservation memo generation. Covers data types unique to AI companies (training data provenance, model artifact preservation, API log retention, safety evaluation records) alongside traditional enterprise sources in one unified data map.
-
-- Default registry: 20 AI-specific + 10 traditional enterprise data types with volume estimates, formats, and risk levels
-- LLM-powered data map generation from company descriptions
-- Legal hold analysis: map litigation scenarios to affected data types with preservation actions, custodian recommendations, and privilege considerations
-- Deterministic risk flags: no retention policy, no custodian, high-risk unprotected, complex preservation with no plan
-- Gap analysis with readiness score (0-100): 40% retention coverage, 30% custodian coverage, 30% high-risk protection
-- 9 scenario types: copyright/training data, harmful output, antitrust, IP theft, regulatory inquiry, employment discrimination (AI), contract dispute, data breach, trade secret
-- LLM-generated preservation scope memos in professional legal format
-- Excel export for data maps and hold details
+Every interactive widget across all modules includes a tooltip (hover the "?" icon) explaining what the field does, what formats are accepted, and what checks it triggers. No external documentation needed to get started.
 
 ## Security Hardening
 
@@ -92,9 +98,9 @@ The LLM integration layer includes three defense layers to prevent prompt inject
 - "Ignore previous instructions" phrases
 - Delimiter floods (5+ consecutive `#`, `=`, `-`)
 
-**Output Schema Validation** — Every LLM JSON response is validated against a typed schema (required keys, type checks, enum constraints, list item types). Malformed responses are annotated with `_schema_errors` for review rather than silently accepted. Schemas cover all 5 JSON-returning prompts: ESI order extraction, privilege log spec, term concepts, term drafts, and field mapping.
+**Output Schema Validation** — Every LLM JSON response is validated against a typed schema (required keys, type checks, enum constraints, list item types). Malformed responses are annotated with `_schema_errors` for review rather than silently accepted. Schemas cover all 7 JSON-returning prompts: ESI order extraction, privilege log spec, term concepts, term drafts, field mapping, AI data map, and hold analysis.
 
-**System Prompt Defense Directives** — All 6 LLM prompts include an identical directive block instructing the model to treat user content as data only and ignore embedded instructions, commands, or role overrides.
+**System Prompt Defense Directives** — All 9 LLM prompts include an identical directive block instructing the model to treat user content as data only and ignore embedded instructions, commands, or role overrides.
 
 ### Testing the Security Layers
 
@@ -187,7 +193,7 @@ Expected output: type errors for `required_fields` (str instead of list) and `ha
 
 **Test 4 — Prompt Defense Directives**
 
-Verify all 6 prompts have the defense directive:
+Verify all 9 prompts have the defense directive:
 
 ```bash
 head -1 llm/prompts/*.txt
@@ -210,16 +216,18 @@ python3 tests/demo_hardening.py
 ## Architecture
 
 ```
-Streamlit UI
+Streamlit UI (with inline tooltips on every widget)
       |
 Orchestration layer
       |
-  ----+--------+-----------+------
-  |            |           |      |
-Intake QC  Search Terms  Prod QC  Priv Log QC
-               |
-         Name proximity        <-- deterministic nickname/W3 expansion
-               |
+  ----+-----------+--------+-----------+------
+  |               |        |           |      |
+Lit Readiness  Intake QC  Search Terms  Prod QC  Priv Log QC
+  |               |        |           |      |
+  +-- Data map    |  Name proximity    |      |
+  +-- Legal hold  |   (nickname/W3)    |      |
+  +-- Risk flags  |        |           |      |
+      |           |        |           |      |
 Structured parsing engine      <-- all pass/fail decisions here
       |
 LLM integration layer         <-- concept extraction, term drafting, reporting
@@ -317,11 +325,11 @@ ediscovery-toolkit/
     esi_parser.py           # ESI order and privilege log spec extraction
     prompts/                # Versioned prompt templates (with defense directives)
   ui/
+    module_e.py             # Litigation Readiness tab
     module_a.py             # Intake QC tab
+    module_d.py             # Search Term Workbench tab
     module_b.py             # Production QC tab
     module_c.py             # Privilege Log QC tab
-    module_d.py             # Search Term Workbench tab
-    module_e.py             # Litigation Readiness tab
   tests/
     fixtures/               # Synthetic DAT/OPT/CSV test data
 ```
