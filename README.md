@@ -69,6 +69,19 @@ Validates a privilege log draft against court-ordered specifications. Format and
 - Privilege basis codes valid (ACP, WP, common interest, etc.)
 - Format matches order (column order, headers, date format)
 
+### Litigation Readiness
+
+AI-specific and enterprise data mapping, legal hold workflow, and preservation memo generation. Covers data types unique to AI companies (training data provenance, model artifact preservation, API log retention, safety evaluation records) alongside traditional enterprise sources in one unified data map.
+
+- Default registry: 20 AI-specific + 10 traditional enterprise data types with volume estimates, formats, and risk levels
+- LLM-powered data map generation from company descriptions
+- Legal hold analysis: map litigation scenarios to affected data types with preservation actions, custodian recommendations, and privilege considerations
+- Deterministic risk flags: no retention policy, no custodian, high-risk unprotected, complex preservation with no plan
+- Gap analysis with readiness score (0-100): 40% retention coverage, 30% custodian coverage, 30% high-risk protection
+- 9 scenario types: copyright/training data, harmful output, antitrust, IP theft, regulatory inquiry, employment discrimination (AI), contract dispute, data breach, trade secret
+- LLM-generated preservation scope memos in professional legal format
+- Excel export for data maps and hold details
+
 ## Security Hardening
 
 The LLM integration layer includes three defense layers to prevent prompt injection from manipulating which QC checks the deterministic engine runs:
@@ -268,7 +281,7 @@ Opens at `http://localhost:8501`. Upload files in each tab, run QC checks, and e
 pytest tests/ -v
 ```
 
-106 tests covering parser edge cases, all validators, search term analytics, name proximity generation, input sanitization, schema validation, LLM client hardening, and end-to-end module QC with synthetic fixtures.
+121 tests covering parser edge cases, all validators, search term analytics, name proximity generation, input sanitization, schema validation, LLM client hardening, litigation readiness risk flags, and end-to-end module QC with synthetic fixtures.
 
 ## Project Structure
 
@@ -291,6 +304,8 @@ ediscovery-toolkit/
       family.py             # Family integrity checks
       coding.py             # Privilege and PII coding flags
       crossref.py           # DAT/OPT cross-reference
+    ai_lithold.py           # Litigation readiness: data registry, risk flags, gap analysis
+    ai_lithold_generator.py # Litigation readiness: LLM data map, hold analysis, memo
     term_generator/
       generator.py          # Two-stage LLM pipeline (concepts → terms)
       name_proximity.py     # Deterministic name W/3 expansion + nicknames
@@ -306,6 +321,7 @@ ediscovery-toolkit/
     module_b.py             # Production QC tab
     module_c.py             # Privilege Log QC tab
     module_d.py             # Search Term Workbench tab
+    module_e.py             # Litigation Readiness tab
   tests/
     fixtures/               # Synthetic DAT/OPT/CSV test data
 ```
