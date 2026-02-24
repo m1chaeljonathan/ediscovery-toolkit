@@ -1,6 +1,6 @@
 # eDiscovery Toolkit
 
-Local-first QC toolkit for eDiscovery professionals. Automates the highest-risk workflows for project managers, attorneys, and legal ops teams — production review, load file intake, and privilege log conformity — without sending client data to external services.
+Local-first QC toolkit for eDiscovery professionals. Covers the full EDRM workflow — from litigation readiness and data mapping through search term generation, load file intake, production QC, and privilege log conformity — without sending client data to external services.
 
 ## Why
 
