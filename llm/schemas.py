@@ -83,6 +83,60 @@ FIELD_MAPPING_SCHEMA = {
     'map_sentinel': True,  # all values must be str
 }
 
+AI_DATAMAP_SCHEMA = {
+    'required_keys': ['company_type', 'data_types', 'notes'],
+    'types': {
+        'company_type': str,
+        'data_types': list,
+        'notes': (str, type(None)),
+    },
+    'list_item_types': {
+        'data_types': {
+            'required_keys': [
+                'category', 'name', 'description',
+                'typical_volume', 'typical_format',
+                'legal_risk', 'preservation_complexity',
+            ],
+            'enums': {
+                'category': [
+                    'training_data', 'model_artifacts', 'api_interactions',
+                    'safety_alignment', 'development_records',
+                    'email_messaging', 'documents_fileshares',
+                    'databases_applications', 'cloud_saas',
+                ],
+                'legal_risk': ['high', 'medium', 'low'],
+                'preservation_complexity': ['high', 'medium', 'low'],
+            },
+        },
+    },
+}
+
+AI_HOLD_ANALYSIS_SCHEMA = {
+    'required_keys': [
+        'scenario_type', 'affected_data_type_ids',
+        'hold_scope_summary', 'estimated_volume',
+        'suggested_custodians', 'preservation_actions',
+        'privilege_considerations', 'cross_border_flags',
+    ],
+    'types': {
+        'scenario_type': str,
+        'affected_data_type_ids': list,
+        'hold_scope_summary': str,
+        'estimated_volume': str,
+        'suggested_custodians': list,
+        'preservation_actions': list,
+        'privilege_considerations': list,
+        'cross_border_flags': list,
+    },
+    'enums': {
+        'scenario_type': [
+            'copyright_training_data', 'harmful_output', 'antitrust',
+            'ip_theft', 'regulatory_inquiry', 'employment_discrimination_ai',
+            'contract_dispute', 'data_breach', 'trade_secret',
+        ],
+    },
+}
+
 
 # ── Validation ─────────────────────────────────────────────────────────
 
@@ -130,16 +184,23 @@ def validate_schema(data, schema: dict, strict: bool = False) -> list[str]:
                 f'key "{key}": expected {nice}, got {type(val).__name__}'
             )
 
-    # List item types
-    for key, item_type in schema.get('list_item_types', {}).items():
+    # List item types — supports simple types (str, int) or nested schemas (dict)
+    for key, item_spec in schema.get('list_item_types', {}).items():
         val = data.get(key)
         if isinstance(val, list):
-            for idx, item in enumerate(val):
-                if not isinstance(item, item_type):
-                    errors.append(
-                        f'key "{key}"[{idx}]: expected {item_type.__name__}, '
-                        f'got {type(item).__name__}'
-                    )
+            if isinstance(item_spec, dict):
+                # Nested schema — validate each item as a sub-schema
+                for idx, item in enumerate(val):
+                    for err in validate_schema(item, item_spec, strict):
+                        errors.append(f'key "{key}"[{idx}]: {err}')
+            else:
+                # Simple type check
+                for idx, item in enumerate(val):
+                    if not isinstance(item, item_spec):
+                        errors.append(
+                            f'key "{key}"[{idx}]: expected {item_spec.__name__}, '
+                            f'got {type(item).__name__}'
+                        )
 
     # Enum checks
     for key, allowed in schema.get('enums', {}).items():
