@@ -12,12 +12,19 @@ def render():
                "completeness issues before ingestion.")
 
     dat_file = st.file_uploader("Load file (DAT or CSV)", type=['dat', 'csv'],
-                                key="intake_dat")
+                                key="intake_dat",
+                                help="Upload the load file received from the producing party. "
+                                     "Supports Concordance DAT (ASCII 020/254 delimiters) and CSV formats.")
     required = st.text_area("Required fields (one per line)",
                             "BEGDOC\nENDDOC\nCUSTODIAN\nDATE_SENT",
-                            key="intake_fields")
+                            key="intake_fields",
+                            help="List the metadata fields that must be present in every record. "
+                                 "Field names should match the load file headers exactly (case-sensitive).")
 
-    if st.button("Run Intake QC", type="primary", key="run_intake") and dat_file:
+    if st.button("Run Intake QC", type="primary", key="run_intake",
+                  help="Checks delimiter/encoding detection, required field presence, "
+                       "blank control numbers, duplicate control numbers, broken family "
+                       "ranges, and Purview date format detection.") and dat_file:
         with st.spinner("Validating..."):
             with tempfile.NamedTemporaryFile(suffix='.dat', delete=False) as f:
                 f.write(dat_file.read())
@@ -36,4 +43,5 @@ def render():
         st.subheader("Issues")
         st.json(result['issues'])
         st.download_button("Download results",
-            json.dumps(result, indent=2), "intake_qc.json", "application/json")
+            json.dumps(result, indent=2), "intake_qc.json", "application/json",
+            help="Export the full QC results as a JSON file for archival or downstream processing.")

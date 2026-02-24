@@ -13,14 +13,18 @@ def render():
                "court order specifications.")
 
     log_file = st.file_uploader("Privilege log (Excel or CSV)", type=['xlsx', 'csv'],
-                                key="privlog_file")
+                                key="privlog_file",
+                                help="Upload the privilege log draft. Supports Excel (.xlsx) and CSV formats. Each row should represent one withheld or redacted document.")
     order_file = st.file_uploader("Privilege log order PDF (optional)", type=['pdf'],
-                                  key="privlog_order")
+                                  key="privlog_order",
+                                  help="Upload the court order specifying privilege log requirements. The LLM will extract required columns and formatting rules automatically.")
     required_cols = st.text_area("Required columns (one per line)",
         "DATE\nAUTHOR\nRECIPIENTS\nDOC_TYPE\nPRIVILEGE_BASIS",
-        key="privlog_cols")
+        key="privlog_cols",
+        help="List the column headers that must be present and populated in the privilege log. These are overridden if an order PDF is uploaded and successfully parsed.")
 
-    if st.button("Run Privilege Log QC", type="primary", key="run_privlog") and log_file:
+    if st.button("Run Privilege Log QC", type="primary", key="run_privlog",
+                  help="Validates required columns are present, required fields are populated (date, author, recipients, doc type, privilege basis), and privilege basis codes are valid (ACP, WP, common interest, etc.).") and log_file:
         with st.spinner("Validating..."):
             suffix = '.' + log_file.name.rsplit('.', 1)[-1]
             with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
@@ -52,4 +56,5 @@ def render():
         st.subheader("Issues")
         st.json(result['issues'])
         st.download_button("Download results",
-            json.dumps(result, indent=2), "privlog_qc.json", "application/json")
+            json.dumps(result, indent=2), "privlog_qc.json", "application/json",
+            help="Export the full QC results as a JSON file for archival or downstream processing.")

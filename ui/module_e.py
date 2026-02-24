@@ -88,6 +88,16 @@ def _to_excel_holds(holds: list[LegalHold]) -> bytes:
     return buf.getvalue()
 
 
+def _clear_session(key: str):
+    """Render a clear session button. Key must be unique per tab."""
+    st.divider()
+    if st.button("Clear session", type="secondary", key=key):
+        st.session_state.e_data_types = []
+        st.session_state.e_holds = []
+        st.session_state.e_memo = ""
+        st.rerun()
+
+
 def render():
     _init_state()
     st.header("Litigation Readiness")
@@ -104,19 +114,22 @@ def render():
 
         col1, col2, col3 = st.columns(3)
         with col1:
-            if st.button("Load AI defaults", type="secondary"):
-                added = _load_defaults(DEFAULT_AI_DATA_TYPES)
-                st.success(f"Added {added} AI data types")
-                if added:
-                    st.rerun()
-        with col2:
-            if st.button("Load traditional defaults", type="secondary"):
+            if st.button("Load traditional defaults", type="secondary",
+                         help="Load 10 traditional enterprise data types (email, file shares, HR systems, financial records, etc.) as a starting registry."):
                 added = _load_defaults(DEFAULT_TRADITIONAL_DATA_TYPES)
                 st.success(f"Added {added} traditional data types")
                 if added:
                     st.rerun()
+        with col2:
+            if st.button("Load AI defaults", type="secondary",
+                         help="Load 20 AI-specific data types (training data, model artifacts, evaluation records, API logs, etc.) for AI/ML companies."):
+                added = _load_defaults(DEFAULT_AI_DATA_TYPES)
+                st.success(f"Added {added} AI data types")
+                if added:
+                    st.rerun()
         with col3:
-            if st.button("Load all defaults", type="secondary"):
+            if st.button("Load all defaults", type="secondary",
+                         help="Load all 30 default data types (traditional + AI). Duplicates are automatically skipped if some are already loaded."):
                 added = _load_defaults(ALL_DEFAULT_DATA_TYPES)
                 st.success(f"Added {added} data types")
                 if added:
@@ -130,8 +143,10 @@ def render():
             "Describe the organization (industry, AI usage, data sources)",
             height=100,
             placeholder="e.g. AI research lab building large language models, "
-                        "with 500 employees, using cloud infrastructure...")
-        if st.button("Generate data map", type="primary") and company_desc:
+                        "with 500 employees, using cloud infrastructure...",
+            help="Describe the company's industry, size, data infrastructure, and AI/ML usage. The LLM generates a tailored data map based on this description.")
+        if st.button("Generate data map", type="primary",
+                     help="Uses the LLM to analyze the company description and suggest relevant data types with categories, volumes, formats, and risk levels. Requires a running Ollama instance.") and company_desc:
             with st.spinner("Analyzing company profile..."):
                 result = generate_data_map(company_desc)
             if result.get("parse_error"):
@@ -183,11 +198,13 @@ def render():
                     with c1:
                         new_retention = st.text_input(
                             "Retention policy", value=dt.retention_policy,
-                            key=f"e_ret_{i}")
+                            key=f"e_ret_{i}",
+                            help="Define how long this data type must be retained (e.g. '7 years', 'indefinite', 'per litigation hold'). 'undefined' triggers a risk flag.")
                     with c2:
                         new_custodian = st.text_input(
                             "Custodian", value=dt.custodian,
-                            key=f"e_cust_{i}")
+                            key=f"e_cust_{i}",
+                            help="Person or team responsible for preserving this data type. 'unassigned' triggers a risk flag.")
 
                     c3, c4 = st.columns(2)
                     with c3:
@@ -196,14 +213,16 @@ def render():
                             "Legal risk", risk_opts,
                             index=risk_opts.index(dt.legal_risk)
                             if dt.legal_risk in risk_opts else 1,
-                            key=f"e_risk_{i}")
+                            key=f"e_risk_{i}",
+                            help="Litigation exposure level. High-risk types without retention policies or custodians are flagged as critical.")
                     with c4:
                         cx_opts = ["high", "medium", "low"]
                         new_cx = st.selectbox(
                             "Preservation complexity", cx_opts,
                             index=cx_opts.index(dt.preservation_complexity)
                             if dt.preservation_complexity in cx_opts else 1,
-                            key=f"e_cx_{i}")
+                            key=f"e_cx_{i}",
+                            help="Difficulty of preserving this data type in place. High complexity without a retention plan triggers a risk flag.")
 
                     bc1, bc2 = st.columns(2)
                     with bc1:
@@ -224,15 +243,23 @@ def render():
         with st.form("add_custom_dt"):
             fc1, fc2 = st.columns(2)
             with fc1:
-                c_name = st.text_input("Name")
-                c_cat = st.selectbox("Category", CATEGORIES)
-                c_desc = st.text_input("Description")
-                c_vol = st.text_input("Typical volume", placeholder="e.g. 10TB+")
+                c_name = st.text_input("Name",
+                                       help="Descriptive name for the data type (e.g. 'Training Data Provenance Records').")
+                c_cat = st.selectbox("Category", CATEGORIES,
+                                     help="Data classification category. AI categories include training_data, model_artifacts, safety_evaluations, etc. Traditional categories include email, file_shares, hr_systems, etc.")
+                c_desc = st.text_input("Description",
+                                       help="Brief description of what this data type contains and where it is stored.")
+                c_vol = st.text_input("Typical volume", placeholder="e.g. 10TB+",
+                                      help="Estimated data volume (e.g. '10TB+', '500GB', '< 1GB').")
             with fc2:
-                c_fmt = st.text_input("Typical format", placeholder="e.g. JSONL, parquet")
-                c_risk = st.selectbox("Legal risk", ["high", "medium", "low"])
-                c_cx = st.selectbox("Preservation complexity", ["high", "medium", "low"])
-                c_notes = st.text_input("Notes (optional)")
+                c_fmt = st.text_input("Typical format", placeholder="e.g. JSONL, parquet",
+                                      help="Common file formats (e.g. 'JSONL, parquet', 'PST, MSG', 'PDF, DOCX').")
+                c_risk = st.selectbox("Legal risk", ["high", "medium", "low"],
+                                      help="Litigation exposure if this data is lost or improperly handled.")
+                c_cx = st.selectbox("Preservation complexity", ["high", "medium", "low"],
+                                    help="Difficulty of implementing a litigation hold on this data type.")
+                c_notes = st.text_input("Notes (optional)",
+                                        help="Additional context, known issues, or preservation instructions.")
             if st.form_submit_button("Add data type") and c_name:
                 dt_id = f"custom_{c_cat}_{c_name.lower().replace(' ', '_')}"
                 st.session_state.e_data_types.append(DataType(
@@ -243,6 +270,8 @@ def render():
                     preservation_complexity=c_cx, notes=c_notes))
                 st.rerun()
 
+        _clear_session("e_clear_map")
+
     # -- Legal Hold tab --------------------------------------------------------
     with tab_hold:
         st.subheader("Legal Hold Analysis")
@@ -250,14 +279,17 @@ def render():
         if not data_types:
             st.info("Build a data map first (Data Map tab).")
         else:
-            scenario_type = st.selectbox("Scenario type", SCENARIO_TYPES)
+            scenario_type = st.selectbox("Scenario type", SCENARIO_TYPES,
+                                         help="Select the litigation scenario category. Maps to specific data types and preservation actions (e.g. 'copyright_training_data' focuses on training pipeline data).")
             scenario_text = st.text_area(
                 "Describe the litigation scenario",
                 height=100,
                 placeholder="e.g. Plaintiff alleges our training data included "
-                            "copyrighted works without license...")
+                            "copyrighted works without license...",
+                help="Describe the specific legal claim or regulatory inquiry. The LLM maps this to affected data types in your registry and suggests preservation actions.")
 
-            if st.button("Analyze scenario", type="primary") and scenario_text:
+            if st.button("Analyze scenario", type="primary",
+                         help="Uses the LLM to identify affected data types, suggest custodians, preservation actions, privilege considerations, and cross-border flags based on your data map.") and scenario_text:
                 with st.spinner("Mapping scenario to data types..."):
                     result = analyze_hold_scenario(scenario_text, data_types)
                 if result.get("parse_error"):
@@ -335,6 +367,8 @@ def render():
                             st.session_state.e_holds.pop(i)
                             st.rerun()
 
+        _clear_session("e_clear_hold")
+
     # -- Risk Assessment tab ---------------------------------------------------
     with tab_risk:
         st.subheader("Risk Assessment")
@@ -391,8 +425,10 @@ def render():
                     f"{h.scenario_type}: {h.scenario[:60]}" for h in holds]
                 selected_idx = st.selectbox(
                     "Select hold for memo", range(len(hold_options)),
-                    format_func=lambda i: hold_options[i])
-                if st.button("Generate preservation memo", type="primary"):
+                    format_func=lambda i: hold_options[i],
+                    help="Choose which saved legal hold to generate a preservation memo for.")
+                if st.button("Generate preservation memo", type="primary",
+                             help="Generates a professional preservation scope memo in legal format, covering affected data types, custodians, preservation actions, and privilege considerations."):
                     with st.spinner("Drafting preservation memo..."):
                         memo = generate_preservation_memo(
                             holds[selected_idx], data_types)
@@ -401,6 +437,8 @@ def render():
 
             if st.session_state.e_memo:
                 st.markdown(st.session_state.e_memo)
+
+        _clear_session("e_clear_risk")
 
     # -- Export tab -------------------------------------------------------------
     with tab_export:
@@ -419,7 +457,8 @@ def render():
                         "Download data map (Excel)",
                         xl_map, "litigation_readiness_datamap.xlsx",
                         "application/vnd.openxmlformats-officedocument"
-                        ".spreadsheetml.sheet")
+                        ".spreadsheetml.sheet",
+                        help="Export the full data type registry as an Excel workbook for distribution to IT, legal, and compliance teams.")
                     st.caption(f"{len(data_types)} data types")
             with col2:
                 if holds:
@@ -428,7 +467,8 @@ def render():
                         "Download hold details (Excel)",
                         xl_holds, "litigation_readiness_holds.xlsx",
                         "application/vnd.openxmlformats-officedocument"
-                        ".spreadsheetml.sheet")
+                        ".spreadsheetml.sheet",
+                        help="Export all saved legal holds as an Excel workbook with affected data types, custodians, and preservation actions.")
                     st.caption(f"{len(holds)} holds")
 
             if st.session_state.e_memo:
@@ -436,11 +476,7 @@ def render():
                     "Download preservation memo (Markdown)",
                     st.session_state.e_memo,
                     "preservation_memo.md",
-                    "text/markdown")
+                    "text/markdown",
+                    help="Export the preservation memo as a Markdown file for conversion to Word or PDF.")
 
-            st.divider()
-            if st.button("Clear session", type="secondary"):
-                st.session_state.e_data_types = []
-                st.session_state.e_holds = []
-                st.session_state.e_memo = ""
-                st.rerun()
+        _clear_session("e_clear_export")

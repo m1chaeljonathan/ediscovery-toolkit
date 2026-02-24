@@ -44,6 +44,15 @@ def _to_excel(terms: list) -> bytes:
     return buf.getvalue()
 
 
+def _clear_session(key: str):
+    """Render a clear session button. Key must be unique per tab."""
+    st.divider()
+    if st.button("Clear session", type="secondary", key=key):
+        st.session_state.terms = []
+        st.session_state.custodian_date_ranges = []
+        st.rerun()
+
+
 def render():
     _init_state()
     st.header("Search Term Workbench")
@@ -58,17 +67,30 @@ def render():
         case_text = st.text_area(
             "Case description / ESI order text", height=140,
             placeholder="Describe the matter, key allegations, custodians, "
-                        "and relevant time period...")
+                        "and relevant time period...",
+            help="Describe the matter, key allegations, custodians, relevant "
+                 "time periods, and document types. The LLM extracts legal "
+                 "concepts and drafts search terms from this text.")
         seeds_raw = st.text_area("Seed terms (optional — one per line)",
-                                 height=60)
+                                 height=60,
+                                 help="Pre-existing search terms to include "
+                                      "alongside LLM-generated terms. One term "
+                                      "per line, in dtSearch or Lucene syntax.")
         seeds = [s.strip() for s in seeds_raw.splitlines() if s.strip()]
 
         col1, col2 = st.columns(2)
         with col1:
             proposed_by = st.selectbox(
-                "Proposed by", ['pm', 'plaintiff', 'defense', 'attorney'])
+                "Proposed by", ['pm', 'plaintiff', 'defense', 'attorney'],
+                help="Track which party proposed these terms for negotiation "
+                     "round tracking.")
 
-        if st.button("Generate terms", type="primary") and case_text:
+        if st.button("Generate terms", type="primary",
+                     help="Runs a two-stage LLM pipeline: (1) extracts legal "
+                          "concepts, named entities, and date ranges from the "
+                          "case text, (2) drafts dtSearch/Lucene terms with "
+                          "rationale and risk notes. Includes deterministic "
+                          "name proximity expansions.") and case_text:
             with st.spinner("Extracting concepts and drafting terms..."):
                 concepts, raw_terms = generate(case_text, seeds)
             st.session_state['last_concepts'] = concepts
@@ -99,11 +121,22 @@ def render():
 
         st.divider()
         st.subheader("Add term manually")
-        new_text = st.text_input("Term text (dtSearch syntax)")
-        new_syntax = st.selectbox("Syntax", ['dtsearch', 'lucene'])
+        new_text = st.text_input("Term text (dtSearch syntax)",
+                                 help="Enter a search term using dtSearch "
+                                      "connector syntax (W/n for proximity, "
+                                      "AND/OR/NOT for Boolean, * for wildcards, "
+                                      "\"quotes\" for phrases).")
+        new_syntax = st.selectbox("Syntax", ['dtsearch', 'lucene'],
+                                   help="Select the search syntax format. "
+                                        "dtSearch uses W/n proximity operators; "
+                                        "Lucene uses ~n proximity and standard "
+                                        "Boolean.")
         new_by = st.selectbox("Proposed by ",
-                              ['pm', 'plaintiff', 'defense', 'attorney'])
-        if st.button("Add term") and new_text:
+                              ['pm', 'plaintiff', 'defense', 'attorney'],
+                              help="Track which party proposed this term.")
+        if st.button("Add term",
+                     help="Add a manually entered term to the review list. "
+                          "The term will be syntax-validated on entry.") and new_text:
             errors = validate_syntax(new_text, new_syntax)
             st.session_state.terms.append(TermStats(
                 term_text=new_text, syntax=new_syntax,
@@ -113,6 +146,8 @@ def render():
             ))
             st.rerun()
 
+        _clear_session("d_clear_gen")
+
     # -- Review & QC tab -------------------------------------------------------
     with review_tab:
         terms = st.session_state.terms
@@ -121,7 +156,11 @@ def render():
         else:
             total_docs = st.number_input(
                 "Total docs in scope (for % calculation)",
-                min_value=1, value=10000)
+                min_value=1, value=10000,
+                help="Enter the total document count in the review population. "
+                     "Used to calculate the % of dataset each term hits. "
+                     "Update this from your Relativity or review platform "
+                     "stats.")
 
             terms_with_hits = compute_stats(
                 [{'term_text': t.term_text, 'syntax': t.syntax,
@@ -169,18 +208,34 @@ def render():
                     c1, c2, c3 = st.columns(3)
                     with c1:
                         dh = st.number_input("Doc hits", min_value=0,
-                                             value=t.doc_hits, key=f"dh_{i}")
+                                             value=t.doc_hits, key=f"dh_{i}",
+                                             help="Number of documents matching "
+                                                  "this term. Enter from your "
+                                                  "review platform search "
+                                                  "results.")
                     with c2:
                         fh = st.number_input("Family hits", min_value=0,
-                                             value=t.family_hits, key=f"fh_{i}")
+                                             value=t.family_hits, key=f"fh_{i}",
+                                             help="Number of family members "
+                                                  "(attachments/embedded) pulled "
+                                                  "in by this term. A family/doc "
+                                                  "ratio above 3x triggers the "
+                                                  "ATTACHMENT HEAVY flag.")
                     with c3:
                         uh = st.number_input("Unique hits", min_value=0,
-                                             value=t.unique_hits, key=f"uh_{i}")
+                                             value=t.unique_hits, key=f"uh_{i}",
+                                             help="Documents hit only by this "
+                                                  "term and no other. A "
+                                                  "unique/total ratio below 5% "
+                                                  "triggers the SUBSUMED flag.")
 
                     new_status = st.selectbox(
                         "Status", STATUS_OPTIONS,
                         index=STATUS_OPTIONS.index(t.status),
-                        key=f"st_{i}")
+                        key=f"st_{i}",
+                        help="Term lifecycle status: draft (initial), proposed "
+                             "(sent to opposing), accepted (agreed), rejected "
+                             "(struck), modified (revised version pending).")
 
                     if st.button("Update", key=f"upd_{i}"):
                         st.session_state.terms[i].doc_hits = dh
@@ -192,6 +247,8 @@ def render():
                     if st.button("Remove", key=f"rm_{i}"):
                         st.session_state.terms.pop(i)
                         st.rerun()
+
+        _clear_session("d_clear_review")
 
     # -- Export tab -------------------------------------------------------------
     with export_tab:
@@ -214,7 +271,10 @@ def render():
                     "Download all terms",
                     xl_all, "search_terms_all.xlsx",
                     "application/vnd.openxmlformats-officedocument"
-                    ".spreadsheetml.sheet")
+                    ".spreadsheetml.sheet",
+                    help="Export all terms (every status) as an Excel workbook "
+                         "for negotiation tracking. Use file naming for "
+                         "versioning (e.g. Round1_PlaintiffProposal.xlsx).")
             with col2:
                 if accepted:
                     xl_acc = _to_excel(accepted)
@@ -222,9 +282,9 @@ def render():
                         "Download accepted only",
                         xl_acc, "search_terms_accepted.xlsx",
                         "application/vnd.openxmlformats-officedocument"
-                        ".spreadsheetml.sheet")
+                        ".spreadsheetml.sheet",
+                        help="Export only accepted terms as an Excel workbook. "
+                             "Use this for the final agreed-upon search term "
+                             "list.")
 
-            if st.button("Clear session", type="secondary"):
-                st.session_state.terms = []
-                st.session_state.custodian_date_ranges = []
-                st.rerun()
+        _clear_session("d_clear_export")

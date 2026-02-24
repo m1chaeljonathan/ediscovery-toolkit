@@ -38,22 +38,28 @@ def render():
     col1, col2 = st.columns(2)
     with col1:
         dat_file = st.file_uploader("Production DAT file", type=['dat', 'csv'],
-                                    key="prod_dat")
+                                    key="prod_dat",
+                                    help="Upload the outgoing production load file. Concordance DAT or CSV with metadata fields (BEGDOC, ENDDOC, CONFIDENTIALITY, etc.).")
     with col2:
         opt_file = st.file_uploader("OPT image load file (optional)", type=['opt'],
-                                    key="prod_opt")
+                                    key="prod_opt",
+                                    help="Upload the OPT image load file for DAT-to-OPT cross-reference validation. Verifies every document in the DAT has a corresponding image entry.")
 
     esi_file = st.file_uploader("ESI Order PDF (optional — auto-extracts spec)",
-                                type=['pdf'], key="prod_esi")
+                                type=['pdf'], key="prod_esi",
+                                help="Upload the ESI order or production protocol PDF. The LLM will extract image format, Bates prefix, hash requirements, and required metadata fields automatically.")
 
     with st.expander("Manual spec overrides"):
-        prefix = st.text_input("Expected Bates prefix (e.g. PROD)")
+        prefix = st.text_input("Expected Bates prefix (e.g. PROD)",
+                               help="The prefix all Bates numbers should start with (e.g. PROD, DEF). Leave blank to skip prefix validation.")
         confidentiality = st.text_area(
             "Valid confidentiality values (one per line)",
             "CONFIDENTIAL\nHIGHLY CONFIDENTIAL - ATTORNEYS EYES ONLY",
+            help="List each allowed confidentiality designation on its own line. Documents with designations not in this list will be flagged.",
         )
 
-    if st.button("Run Production QC", type="primary", key="run_prod") and dat_file:
+    if st.button("Run Production QC", type="primary", key="run_prod",
+                  help="Runs Bates sequence/gap/duplicate checks, family integrity, privilege/PII coding flags, confidentiality validation, and DAT-to-OPT cross-reference.") and dat_file:
         with st.spinner("Running QC checks..."):
             with tempfile.NamedTemporaryFile(suffix='.dat', delete=False) as f:
                 f.write(dat_file.read())
@@ -139,23 +145,27 @@ def render():
         with dl1:
             st.download_button("Download JSON",
                 json.dumps(result['issues'], indent=2),
-                "qc_issues.json", "application/json", key="dl_json")
+                "qc_issues.json", "application/json", key="dl_json",
+                help="Export QC issues as structured JSON for programmatic processing.")
         with dl2:
             if not issues_df.empty:
                 st.download_button("Download CSV",
                     issues_df.to_csv(index=False),
-                    "qc_issues.csv", "text/csv", key="dl_csv")
+                    "qc_issues.csv", "text/csv", key="dl_csv",
+                    help="Export QC issues as a flat CSV for spreadsheet review.")
         with dl3:
             if not issues_df.empty:
                 st.download_button("Download XLSX",
                     _df_to_xlsx(issues_df),
                     "qc_issues.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="dl_xlsx")
+                    key="dl_xlsx",
+                    help="Export QC issues as an Excel workbook for sharing with the review team.")
 
         # LLM summary generation
         st.divider()
-        if st.button("Generate Counsel Summary (requires Ollama)", key="gen_summary"):
+        if st.button("Generate Counsel Summary (requires Ollama)", key="gen_summary",
+                     help="Generates a professional memo summarizing QC results for counsel review. Requires a running Ollama instance with a compatible model."):
             with st.spinner("Generating summary memo via LLM..."):
                 try:
                     memo = generate_qc_summary(result)
@@ -169,4 +179,5 @@ def render():
             st.markdown(st.session_state['prod_qc_memo'])
             st.download_button("Download summary.md",
                 st.session_state['prod_qc_memo'],
-                "summary.md", "text/markdown", key="dl_summary")
+                "summary.md", "text/markdown", key="dl_summary",
+                help="Export the counsel summary memo as a Markdown file.")
