@@ -245,12 +245,45 @@ LLM integration layer         <-- concept extraction, term drafting, reporting
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.11+ (local) or Docker (containerized)
 - [Ollama](https://ollama.com) running locally (for LLM features — QC checks work without it)
 
 Minimum model: 8B (Llama 3.1 8B, Phi-4). Recommended: 32B+ for reliable legal document parsing.
 
-## Setup
+## Quick Start — Docker (recommended for IT teams)
+
+Three commands to deploy:
+
+```bash
+git clone https://github.com/m1chaeljonathan/ediscovery-toolkit.git
+cd ediscovery-toolkit
+docker compose up -d
+```
+
+Open `http://localhost:8501` — the first-run setup wizard handles LLM configuration and model selection.
+
+**Apple Silicon Mac users**: Docker cannot access the Apple GPU. Install Ollama natively for GPU acceleration, then run only the app container:
+
+```bash
+brew install ollama && ollama serve   # native GPU acceleration
+EDISCOVERY_LLM_URL=http://host.docker.internal:11434/v1 docker compose up app -d
+```
+
+**NVIDIA GPU users**: Use the GPU profile for accelerated inference:
+
+```bash
+docker compose --profile gpu up -d
+```
+
+### Docker Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EDISCOVERY_LLM_URL` | `http://localhost:11434/v1` | LLM API endpoint |
+| `EDISCOVERY_LLM_MODEL` | `llama3.1:8b` | Model identifier |
+| `EDISCOVERY_LLM_API_KEY` | `local` | API key (for cloud providers) |
+
+## Setup — Local Development
 
 ```bash
 git clone https://github.com/m1chaeljonathan/ediscovery-toolkit.git
@@ -258,15 +291,6 @@ cd ediscovery-toolkit
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-Configure the LLM endpoint in `config.yaml`:
-
-```yaml
-llm:
-  base_url: http://localhost:11434/v1
-  model: llama3.1:8b          # or any Ollama model
-  api_key: local
 ```
 
 Start Ollama and pull a model:
@@ -281,7 +305,9 @@ ollama pull llama3.1:8b
 streamlit run app.py
 ```
 
-Opens at `http://localhost:8501`. Upload files in each tab, run QC checks, and export results as JSON, CSV, or XLSX.
+Opens at `http://localhost:8501`. On first launch, the setup wizard auto-detects LLM providers (Ollama on `:11434`, LM Studio on `:1234`), offers model selection and download, or accepts cloud API keys. Once configured, the wizard saves to `config.yaml` and won't appear again unless you click **Reconfigure LLM** in the sidebar.
+
+Upload files in each tab, run QC checks, and export results as JSON, CSV, or XLSX.
 
 ## Running Tests
 
@@ -295,8 +321,11 @@ pytest tests/ -v
 
 ```
 ediscovery-toolkit/
-  app.py                    # Streamlit entry point
+  app.py                    # Streamlit entry point + wizard routing
+  config.py                 # Config loader (env var overrides, save/reload)
   config.yaml               # LLM endpoint, paths, limits
+  Dockerfile                # Python 3.11-slim container
+  docker-compose.yml        # App + Ollama (GPU via --profile gpu)
   parsers/
     dat_parser.py           # Concordance DAT parser
     opt_parser.py           # OPT image load file parser
@@ -325,6 +354,7 @@ ediscovery-toolkit/
     esi_parser.py           # ESI order and privilege log spec extraction
     prompts/                # Versioned prompt templates (with defense directives)
   ui/
+    setup_wizard.py         # First-run LLM setup wizard
     module_e.py             # Litigation Readiness tab
     module_a.py             # Intake QC tab
     module_d.py             # Search Term Workbench tab
