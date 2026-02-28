@@ -285,16 +285,37 @@ docker compose --profile gpu up -d
 
 ## Desktop App (macOS / Windows)
 
-Build a standalone `.app` (Mac) or `.exe` (Windows) that users can double-click to run — no Python, no terminal:
+Download the latest release from the [Releases page](https://github.com/m1chaeljonathan/ediscovery-toolkit/releases). No Python, no terminal, no configuration files required.
+
+**macOS**:
+1. Download `eDiscovery-Toolkit-macOS.dmg`
+2. Open the `.dmg` and drag **eDiscovery Toolkit** to Applications
+3. First launch: right-click the app → **Open** (required once — the app is unsigned, code signing is planned)
+4. The setup wizard opens in your browser and walks you through LLM configuration
+
+**Windows**:
+1. Download `eDiscovery-Toolkit-Windows.zip`
+2. Extract the folder and double-click **eDiscovery Toolkit.exe**
+3. First launch: click **Run anyway** if Windows SmartScreen appears (unsigned, code signing planned)
+4. The setup wizard opens in your browser and walks you through LLM configuration
+
+**LLM setup options** (the wizard handles all of these):
+- **Ollama** (recommended) — free, local, private. The wizard detects an existing install or provides install instructions, then downloads a model with a progress bar.
+- **Cloud API** — paste an OpenAI or Anthropic API key. Requires internet.
+- **Custom endpoint** — LM Studio, vLLM, or any OpenAI-compatible API.
+
+User config is stored in `~/.ediscovery-toolkit/` and persists across app updates.
+
+### Building from source
+
+To build the desktop app yourself instead of downloading a release:
 
 ```bash
 pip install pyinstaller
 pyinstaller ediscovery-toolkit.spec
 ```
 
-Output: `dist/eDiscovery Toolkit.app` (macOS) or `dist/eDiscovery Toolkit/eDiscovery Toolkit.exe` (Windows). The app opens the browser automatically and stores user config in `~/.ediscovery-toolkit/`.
-
-**Note**: macOS Gatekeeper will block the unsigned app. Right-click the `.app` and select "Open" to bypass. Code signing is planned for a future release.
+Output: `dist/eDiscovery Toolkit.app` (macOS) or `dist/eDiscovery Toolkit/eDiscovery Toolkit.exe` (Windows).
 
 ## Setup — Local Development
 
