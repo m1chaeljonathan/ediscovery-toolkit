@@ -283,6 +283,19 @@ docker compose --profile gpu up -d
 | `EDISCOVERY_LLM_MODEL` | `llama3.1:8b` | Model identifier |
 | `EDISCOVERY_LLM_API_KEY` | `local` | API key (for cloud providers) |
 
+## Desktop App (macOS / Windows)
+
+Build a standalone `.app` (Mac) or `.exe` (Windows) that users can double-click to run — no Python, no terminal:
+
+```bash
+pip install pyinstaller
+pyinstaller ediscovery-toolkit.spec
+```
+
+Output: `dist/eDiscovery Toolkit.app` (macOS) or `dist/eDiscovery Toolkit/eDiscovery Toolkit.exe` (Windows). The app opens the browser automatically and stores user config in `~/.ediscovery-toolkit/`.
+
+**Note**: macOS Gatekeeper will block the unsigned app. Right-click the `.app` and select "Open" to bypass. Code signing is planned for a future release.
+
 ## Setup — Local Development
 
 ```bash
@@ -324,6 +337,8 @@ ediscovery-toolkit/
   app.py                    # Streamlit entry point + wizard routing
   config.py                 # Config loader (env var overrides, save/reload)
   config.yaml               # LLM endpoint, paths, limits
+  launcher.py               # Desktop app entry point (PyInstaller)
+  ediscovery-toolkit.spec   # PyInstaller build config
   Dockerfile                # Python 3.11-slim container
   docker-compose.yml        # App + Ollama (GPU via --profile gpu)
   parsers/
