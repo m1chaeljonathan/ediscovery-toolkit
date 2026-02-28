@@ -22,6 +22,11 @@ _DEFAULT_CONFIG = {
 
 
 def _config_path() -> Path:
+    # Desktop app (PyInstaller): use ~/.ediscovery-toolkit/config.yaml
+    data_dir = os.environ.get('EDISCOVERY_DATA_DIR')
+    if data_dir:
+        return Path(data_dir) / "config.yaml"
+    # Normal dev / Docker: use config.yaml next to this file
     return Path(__file__).parent / "config.yaml"
 
 
