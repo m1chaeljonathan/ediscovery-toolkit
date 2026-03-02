@@ -1,0 +1,24 @@
+eDiscovery Toolkit
+Copyright 2026 Michael Villarmia
+
+License Change Notice
+=====================
+
+Effective March 2026, this project is licensed under the GNU Affero General
+Public License v3.0 (AGPL-3.0).
+
+Prior versions through v0.2.0 were released under the Apache License 2.0.
+Code obtained under Apache 2.0 prior to this change retains those license
+terms for that version. All subsequent contributions and releases are
+governed by AGPL-3.0.
+
+What this means for users:
+- You may freely use, modify, and distribute this software.
+- If you modify this software and make it available over a network
+  (e.g., as a hosted service), you must make your modified source code
+  available under the same AGPL-3.0 license.
+- Attribution is required in all copies and derivative works.
+
+For commercial licensing that permits proprietary modifications or
+hosted deployment without source disclosure, contact:
+michael.villarmia@gmail.com

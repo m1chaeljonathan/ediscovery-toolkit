@@ -425,4 +425,8 @@ Contributions welcome. Please open an issue first to discuss what you'd like to 
 
 ## License
 
-[Apache License 2.0](LICENSE)
+[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE)
+
+This project was originally released under Apache 2.0 through v0.2.0. Effective March 2026, the license was changed to AGPL-3.0 for all subsequent versions. See [NOTICE](NOTICE) for details.
+
+For commercial licensing inquiries, contact michael.villarmia@gmail.com.
