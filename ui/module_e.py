@@ -8,6 +8,7 @@ import io
 import openpyxl
 import streamlit as st
 
+from ui.components import metric_card, status_badge, empty_state
 from modules.ai_lithold import (
     DataType, LegalHold,
     AI_CATEGORIES, TRADITIONAL_CATEGORIES, CATEGORIES, SCENARIO_TYPES,
@@ -186,10 +187,20 @@ def render():
             st.info("Load defaults or generate a data map to get started.")
         else:
             st.caption(f"{len(data_types)} data types in map")
-            for i, dt in enumerate(data_types):
-                risk_badge = {"high": "!!!", "medium": "!!", "low": "!"}.get(
-                    dt.legal_risk, "")
-                with st.expander(f"[{dt.category}] {dt.name} {risk_badge}"):
+
+            # Group data types by AI vs Traditional categories
+            ai_types = [(i, dt) for i, dt in enumerate(data_types)
+                        if dt.category in AI_CATEGORIES]
+            trad_types = [(i, dt) for i, dt in enumerate(data_types)
+                          if dt.category in TRADITIONAL_CATEGORIES]
+            other_types = [(i, dt) for i, dt in enumerate(data_types)
+                           if dt.category not in AI_CATEGORIES
+                           and dt.category not in TRADITIONAL_CATEGORIES]
+
+            def _render_data_type(i, dt):
+                badge_html = status_badge(dt.legal_risk)
+                with st.expander(f"[{dt.category}] {dt.name}"):
+                    st.markdown(f"**Risk**: {badge_html}", unsafe_allow_html=True)
                     st.write(f"**Description**: {dt.description}")
                     st.write(f"**Volume**: {dt.typical_volume} | "
                              f"**Format**: {dt.typical_format}")
@@ -236,6 +247,19 @@ def render():
                         if st.button("Remove", key=f"e_rm_{i}"):
                             st.session_state.e_data_types.pop(i)
                             st.rerun()
+
+            if ai_types:
+                st.markdown("#### AI Data Types")
+                for i, dt in ai_types:
+                    _render_data_type(i, dt)
+            if trad_types:
+                st.markdown("#### Traditional Data Types")
+                for i, dt in trad_types:
+                    _render_data_type(i, dt)
+            if other_types:
+                st.markdown("#### Other Data Types")
+                for i, dt in other_types:
+                    _render_data_type(i, dt)
 
         # Add custom
         st.divider()
@@ -380,11 +404,28 @@ def render():
             flags = compute_risk_flags(data_types)
 
             # Metrics row
+            score = gap['readiness_score']
+            if score > 70:
+                score_color = "#16A34A"
+            elif score >= 40:
+                score_color = "#D97706"
+            else:
+                score_color = "#DC2626"
+
             m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Total data types", gap["total_data_types"])
-            m2.metric("No retention policy", gap["no_retention_policy"])
-            m3.metric("No custodian", gap["no_custodian"])
-            m4.metric("Readiness score", f"{gap['readiness_score']}/100")
+            with m1:
+                metric_card("Total data types", str(gap["total_data_types"]))
+            with m2:
+                metric_card("No retention policy", str(gap["no_retention_policy"]))
+            with m3:
+                metric_card("No custodian", str(gap["no_custodian"]))
+            with m4:
+                st.markdown(f'''
+                <div class="metric-card">
+                    <h3>Readiness score</h3>
+                    <div class="value" style="color:{score_color}">{score}/100</div>
+                </div>
+                ''', unsafe_allow_html=True)
 
             st.divider()
 

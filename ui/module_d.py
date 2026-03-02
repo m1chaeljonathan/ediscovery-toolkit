@@ -7,12 +7,9 @@ from modules.term_analytics import (
     TermStats, compute_stats, group_date_ranges, validate_syntax,
 )
 from modules.term_generator.generator import generate
+from ui.components import metric_card, status_badge, empty_state
 
 STATUS_OPTIONS = ['draft', 'proposed', 'accepted', 'rejected', 'modified']
-STATUS_ICONS = {
-    'draft': '🔘', 'proposed': '🔵', 'accepted': '🟢',
-    'rejected': '🔴', 'modified': '🟡',
-}
 
 
 def _init_state():
@@ -152,7 +149,7 @@ def render():
     with review_tab:
         terms = st.session_state.terms
         if not terms:
-            st.info("Generate or add terms first.")
+            empty_state("No terms yet", "Generate terms from a case description or add them manually on the Generate tab.")
         else:
             total_docs = st.number_input(
                 "Total docs in scope (for % calculation)",
@@ -192,10 +189,22 @@ def render():
             else:
                 st.success("No risk flags")
 
+            # Summary metric cards
+            accepted_count = sum(1 for t in terms_with_hits if t.status == 'accepted')
+            flagged_count = sum(1 for t in terms_with_hits if t.risk_flags)
+            sc1, sc2, sc3 = st.columns(3)
+            with sc1:
+                metric_card("Total Terms", str(len(terms_with_hits)))
+            with sc2:
+                metric_card("Accepted", str(accepted_count))
+            with sc3:
+                metric_card("Flagged", str(flagged_count))
+
             for i, t in enumerate(terms_with_hits):
-                icon = STATUS_ICONS.get(t.status, '⚪')
+                status_label = t.status.upper()
                 flags = f" `{'` `'.join(t.risk_flags)}`" if t.risk_flags else ""
-                with st.expander(f"{icon} {t.term_text[:70]}{flags}"):
+                with st.expander(f"[{status_label}] {t.term_text[:70]}{flags}"):
+                    st.markdown(status_badge(t.status), unsafe_allow_html=True)
                     st.code(t.term_text)
                     if t.lucene_equivalent:
                         st.caption(f"Lucene: `{t.lucene_equivalent}`")
@@ -258,11 +267,14 @@ def render():
                    "Round1_PlaintiffProposal.xlsx, Round2_DefenseCounter.xlsx")
 
         if not terms:
-            st.info("No terms to export yet.")
+            empty_state("No terms to export", "Generate or add terms on the other tabs first.")
         else:
             accepted = [t for t in terms if t.status == 'accepted']
-            st.metric("Total terms", len(terms))
-            st.metric("Accepted terms", len(accepted))
+            ec1, ec2 = st.columns(2)
+            with ec1:
+                metric_card("Total terms", str(len(terms)))
+            with ec2:
+                metric_card("Accepted terms", str(len(accepted)))
 
             col1, col2 = st.columns(2)
             with col1:

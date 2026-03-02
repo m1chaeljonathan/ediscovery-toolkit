@@ -1,16 +1,24 @@
 import json
 import tempfile
 
+import pandas as pd
 import streamlit as st
 
 from modules.privilege_log_qc import run_privilege_log_qc
 from llm.esi_parser import extract_privlog_spec
+from ui.components import result_panel, empty_state
 
 
 def render():
     st.header("Privilege Log QC")
     st.caption("Validate privilege log format and required fields against "
                "court order specifications.")
+
+    if 'privlog_result' not in st.session_state:
+        empty_state(
+            "Upload a privilege log to begin",
+            "Supports Excel and CSV formats. Validates required columns, "
+            "field completeness, and privilege basis codes.")
 
     log_file = st.file_uploader("Privilege log (Excel or CSV)", type=['xlsx', 'csv'],
                                 key="privlog_file",
@@ -46,15 +54,32 @@ def render():
                 v.strip() for v in required_cols.splitlines() if v.strip()
             ]
             result = run_privilege_log_qc(log_path, required_columns=cols)
+            st.session_state['privlog_result'] = result
 
+    if 'privlog_result' in st.session_state:
+        result = st.session_state['privlog_result']
         stats = result['stats']
         if stats['passed']:
-            st.success(f"PASSED — {stats['total_entries']} entries conform to spec")
+            result_panel(
+                f"<strong>PASSED</strong> — {stats['total_entries']} entries conform to spec",
+                status="pass")
         else:
-            st.error(f"FAILED — {stats['total_issues']} conformity issues found")
+            result_panel(
+                f"<strong>FAILED</strong> — {stats['total_issues']} conformity issues found",
+                status="fail")
 
         st.subheader("Issues")
-        st.json(result['issues'])
+        issues = result['issues']
+        rows = []
+        for category, items in issues.items():
+            for item in items:
+                row = {'category': category}
+                row.update(item)
+                rows.append(row)
+        if rows:
+            st.dataframe(pd.DataFrame(rows), use_container_width=True)
+        else:
+            st.info("No issues found.")
         st.download_button("Download results",
             json.dumps(result, indent=2), "privlog_qc.json", "application/json",
             help="Export the full QC results as a JSON file for archival or downstream processing.")

@@ -8,6 +8,7 @@ import streamlit as st
 from modules.production_qc import run_production_qc, generate_qc_summary
 from llm.esi_parser import extract_esi_spec
 from llm.client import LLMClient
+from ui.components import metric_card, result_panel, empty_state
 
 
 def _issues_to_dataframe(issues: dict) -> pd.DataFrame:
@@ -100,16 +101,24 @@ def render():
         stats = result['stats']
 
         if stats['passed']:
-            st.success(f"PASSED — {stats['total_documents']} documents, 0 issues found")
+            result_panel(
+                f"<strong>PASSED</strong> — {stats['total_documents']} documents, 0 issues found",
+                status="pass")
         else:
-            st.error(f"FAILED — {stats['total_issues']} issues across "
-                     f"{stats['total_documents']} documents")
+            result_panel(
+                f"<strong>FAILED</strong> — {stats['total_issues']} issues across "
+                f"{stats['total_documents']} documents",
+                status="fail")
 
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Total Docs", stats['total_documents'])
-        col2.metric("Bates Issues", stats['bates_issues'])
-        col3.metric("Coding Issues", stats['coding_issues'], delta_color="inverse")
-        col4.metric("Family Issues", stats['family_issues'])
+        with col1:
+            metric_card("Total Docs", str(stats['total_documents']))
+        with col2:
+            metric_card("Bates Issues", str(stats['bates_issues']))
+        with col3:
+            metric_card("Coding Issues", str(stats['coding_issues']))
+        with col4:
+            metric_card("Family Issues", str(stats['family_issues']))
 
         if result['issues']['coding']:
             st.subheader("Privilege/PII Flags (immediate review required)")

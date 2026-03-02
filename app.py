@@ -2,12 +2,14 @@ import streamlit as st
 
 from config import is_setup_complete, reload_config
 from ui.setup_wizard import render_wizard, detect_providers, test_llm_connection
+from ui.styles import inject_styles
 
 st.set_page_config(
     page_title="eDiscovery Toolkit",
     page_icon="\u2696",
     layout="wide",
 )
+inject_styles(dark=st.session_state.get('dark_mode', None))
 
 # ---------------------------------------------------------------------------
 # Sidebar — always visible
@@ -24,6 +26,7 @@ with st.sidebar:
         st.caption(f"**Endpoint**: {llm['base_url']}")
 
         if st.button("Reconfigure LLM",
+                      type="primary",
                       help="Re-run the setup wizard to change LLM provider, "
                            "model, or endpoint."):
             # Reset setup_complete so wizard shows
@@ -38,6 +41,7 @@ with st.sidebar:
             st.rerun()
 
     st.divider()
+    st.toggle("Dark mode", key="dark_mode")
     st.caption("Local-first. No data leaves your machine.")
 
 # ---------------------------------------------------------------------------
