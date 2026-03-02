@@ -10,3 +10,9 @@ dist/
 build/
 tests/fixtures/*.zip
 CLAUDE.md
+
+# Local working files
+config.yaml
+research/
+CLAUDE-CODE-LICENSE-CHANGE.md
+CLAUDE-CODE-AUDIT-REMEDIATION.md
