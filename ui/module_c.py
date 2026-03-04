@@ -43,12 +43,13 @@ def render():
             if order_file:
                 with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f:
                     f.write(order_file.read())
-                    try:
-                        spec = extract_privlog_spec(f.name)
-                        st.info(f"Order spec extracted: required columns = "
-                                f"{spec.get('required_columns')}")
-                    except Exception as e:
-                        st.warning(f"Spec extraction failed (LLM may be offline): {e}")
+                    order_path = f.name
+                try:
+                    spec = extract_privlog_spec(order_path)
+                    st.info(f"Order spec extracted: required columns = "
+                            f"{spec.get('required_columns')}")
+                except Exception as e:
+                    st.warning(f"Spec extraction failed (LLM may be offline): {e}")
 
             cols = spec.get('required_columns') or [
                 v.strip() for v in required_cols.splitlines() if v.strip()
@@ -70,12 +71,15 @@ def render():
 
         st.subheader("Issues")
         issues = result['issues']
-        rows = []
-        for category, items in issues.items():
-            for item in items:
-                row = {'category': category}
-                row.update(item)
-                rows.append(row)
+        if isinstance(issues, list):
+            rows = issues
+        else:
+            rows = []
+            for category, items in issues.items():
+                for item in items:
+                    row = {'category': category}
+                    row.update(item)
+                    rows.append(row)
         if rows:
             st.dataframe(pd.DataFrame(rows), use_container_width=True)
         else:

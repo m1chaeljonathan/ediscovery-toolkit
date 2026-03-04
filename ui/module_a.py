@@ -57,12 +57,15 @@ def render():
         st.write(result['headers_received'])
         st.subheader("Issues")
         issues = result['issues']
-        rows = []
-        for category, items in issues.items():
-            for item in items:
-                row = {'category': category}
-                row.update(item)
-                rows.append(row)
+        if isinstance(issues, list):
+            rows = issues
+        else:
+            rows = []
+            for category, items in issues.items():
+                for item in items:
+                    row = {'category': category}
+                    row.update(item)
+                    rows.append(row)
         if rows:
             st.dataframe(pd.DataFrame(rows), use_container_width=True)
         else:

@@ -11,8 +11,10 @@ from llm.client import LLMClient
 from ui.components import metric_card, result_panel, empty_state
 
 
-def _issues_to_dataframe(issues: dict) -> pd.DataFrame:
+def _issues_to_dataframe(issues) -> pd.DataFrame:
     """Flatten all issue categories into a single DataFrame."""
+    if isinstance(issues, list):
+        return pd.DataFrame(issues) if issues else pd.DataFrame()
     rows = []
     for category, items in issues.items():
         for item in items:
